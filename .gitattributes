@@ -1,0 +1,11 @@
+# Normalización de finales de línea entre Windows / Linux / macOS
+# Evita commits "fantasma" cuando varios miembros usan SO distintos
+* text=auto eol=lf
+
+# Archivos binarios (no tocar)
+*.png binary
+*.jpg binary
+*.pdf binary
+*.docx binary
+*.xlsx binary
+*.pptx binary
