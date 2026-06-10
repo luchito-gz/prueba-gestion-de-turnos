@@ -1,554 +1,519 @@
-import { useEffect, useState, useCallback } from "react";
-import { useNavigate } from "react-router-dom";
-import api from "../services/api";
-import { useAuth } from "../context/AuthContext";
+// ─────────────────────────────────────────────────────────────────────────────
+// Agenda.jsx — drop-in replacement para frontend/src/pages/Agenda.jsx
+// Stack: React 18 + Vite + React Router v6 + Axios (sin librerías extra)
+// Vistas: Día / Semana / Mes  |  Estilos: dark theme (matching PR screenshot)
+// ─────────────────────────────────────────────────────────────────────────────
+import { useEffect, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
+import api from '../services/api'
+import { useAuth } from '../context/AuthContext'
 
-// ─── Design System ────────────────────────────────────────────────────────────
-const DS = {
-  pageBg:       "#050510",
-  cardBg:       "rgba(15,23,42,0.95)",
-  inputBg:      "#1e293b",
-  hoverBg:      "#0f172a",
-  blue:         "#2563eb",
-  cyan:         "#06b6d4",
-  gradient:     "linear-gradient(135deg,#2563eb,#06b6d4)",
-  text:         "#ffffff",
-  textSec:      "#94a3b8",
-  textDis:      "#64748b",
-  border:       "#334155",
-  borderCard:   "#1e293b",
-  borderFocus:  "#2563eb",
-  errorBg:      "rgba(220,38,38,0.15)",
-  errorBorder:  "rgba(220,38,38,0.30)",
-  errorText:    "#fca5a5",
-  font:         "'Space Grotesk',sans-serif",
-};
+// ─── CSS injection (scoped con prefijo ag-) ───────────────────────────────────
+;(() => {
+  if (document.getElementById('ag-styles')) return
+  const s = document.createElement('style')
+  s.id = 'ag-styles'
+  s.textContent = `
+    @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+    @keyframes ag-spin { to { transform: rotate(360deg); } }
+    .ag-scroll::-webkit-scrollbar { width: 8px; }
+    .ag-scroll::-webkit-scrollbar-thumb { background: rgba(255,255,255,.12); border-radius: 4px; }
+    .ag-ev:hover { transform: translateY(-1px) !important; z-index: 10 !important; box-shadow: 0 8px 24px rgba(0,0,0,.5) !important; }
+    .ag-nb:hover { background: rgba(255,255,255,.07) !important; color: #e7ecf5 !important; }
+    .ag-gb:hover { background: rgba(255,255,255,.06) !important; color: #e7ecf5 !important; }
+    .ag-mc:hover { background: rgba(255,255,255,.04) !important; }
+    .ag-dc:hover { background: rgba(56,189,248,.06) !important; }
+  `
+  document.head.appendChild(s)
+})()
 
-const SPEC_COLORS = {
-  "Clínica":      ["rgba(37,99,235,0.18)","#60a5fa"],
-  "Kinesiología": ["rgba(6,182,212,0.18)","#67e8f9"],
-  "Nutrición":    ["rgba(245,158,11,0.18)","#fcd34d"],
-  "Odontología":  ["rgba(239,68,68,0.18)","#fca5a5"],
-  "Psicología":   ["rgba(139,92,246,0.18)","#c4b5fd"],
-  "Cardiología":  ["rgba(236,72,153,0.18)","#f9a8d4"],
-};
-const CLINIC_ACCENT = {
-  "Clínica":      ["#2563eb","#3b82f6"],
-  "Kinesiología": ["#0891b2","#06b6d4"],
-  "Nutrición":    ["#d97706","#f59e0b"],
-  "Odontología":  ["#dc2626","#ef4444"],
-  "Psicología":   ["#7c3aed","#8b5cf6"],
-  "Cardiología":  ["#be185d","#ec4899"],
-  "General":      ["#2563eb","#06b6d4"],
-};
-const SLOT_S = {
-  ocupado:    { bg:"rgba(37,99,235,0.25)", fg:"#93c5fd", border:"rgba(37,99,235,0.5)"  },
-  disponible: { bg:"rgba(6,182,212,0.15)", fg:"#67e8f9", border:"rgba(6,182,212,0.4)" },
-  libre:      { bg:"rgba(15,23,42,0.4)",   fg:"#334155", border:"#1e293b"              },
-};
-const AVATAR_G = [
-  ["#6366f1","#2563eb"],["#06b6d4","#0284c7"],
-  ["#8b5cf6","#6d28d9"],["#10b981","#059669"],
-  ["#f59e0b","#d97706"],["#ec4899","#be185d"],
-];
-
-// ─── Helpers ──────────────────────────────────────────────────────────────────
-function hoyISO() { return new Date().toISOString().split("T")[0]; }
-function formatTitulo(iso) {
-  if (!iso) return "";
-  const [y,m,d] = iso.split("-");
-  return new Date(+y,+m-1,+d).toLocaleDateString("es-AR",{weekday:"long",day:"numeric",month:"long",year:"numeric"});
-}
-function formatHora(str) {
-  if (!str) return "—";
-  try { return new Date(str).toLocaleTimeString("es-AR",{hour:"2-digit",minute:"2-digit"}); }
-  catch { return "—"; }
-}
-function useHover() {
-  const [h,set]=useState(false);
-  return [h,{onMouseEnter:()=>set(true),onMouseLeave:()=>set(false)}];
-}
-function useTheme() {
-  const [mode,setMode]=useState(()=>{try{return localStorage.getItem("turnoIA_theme")||"dark";}catch{return "dark";}});
-  const toggle=()=>setMode(m=>{const n=m==="light"?"dark":"light";try{localStorage.setItem("turnoIA_theme",n);}catch{}return n;});
-  return [mode,toggle];
+// ─── Design tokens ────────────────────────────────────────────────────────────
+const C = {
+  bg: '#070a12', bgGlow: '#0e1730',
+  panel: 'rgba(255,255,255,.025)', panel2: 'rgba(255,255,255,.05)',
+  border: 'rgba(255,255,255,.07)', borderStrong: 'rgba(255,255,255,.13)',
+  text: '#e7ecf5', textDim: '#98a3b6', textMute: '#5a6478',
+  accent: '#38bdf8', accent2: '#2b82f6',
+  ok:   '#2dd4bf', okBg:   'rgba(45,212,191,.12)', okBd:   'rgba(45,212,191,.32)',
+  wait: '#fbbf24', waitBg: 'rgba(251,191,36,.12)', waitBd: 'rgba(251,191,36,.32)',
+  can:  '#f87171', canBg:  'rgba(248,113,113,.1)', canBd:  'rgba(248,113,113,.28)',
+  done: '#818cf8', doneBg: 'rgba(129,140,248,.12)',doneBd: 'rgba(129,140,248,.28)',
+  ai:   '#a78bfa', aiBg:   'rgba(167,139,250,.1)', aiBd:   'rgba(167,139,250,.3)',
 }
 
-// ─── Starfield (canvas animado) ───────────────────────────────────────────────
-import { useRef } from "react";
-function Starfield() {
-  const ref = useRef(null);
-  useEffect(()=>{
-    const c=ref.current; if(!c)return;
-    const ctx=c.getContext("2d");
-    c.width=window.innerWidth; c.height=window.innerHeight;
-    const stars=Array.from({length:120},()=>({
-      x:Math.random()*c.width,y:Math.random()*c.height,
-      r:Math.random()*1.4+0.4,o:Math.random()*0.5+0.3,
-      s:Math.random()*0.4+0.1,
-    }));
-    let frame;
-    const draw=()=>{
-      ctx.clearRect(0,0,c.width,c.height);
-      stars.forEach(s=>{
-        ctx.beginPath(); ctx.arc(s.x,s.y,s.r,0,Math.PI*2);
-        ctx.fillStyle=`rgba(255,255,255,${s.o})`; ctx.fill();
-        s.o+=s.s*0.007; if(s.o>0.9||s.o<0.3)s.s*=-1;
-      });
-      frame=requestAnimationFrame(draw);
-    };
-    draw();
-    const resize=()=>{c.width=window.innerWidth;c.height=window.innerHeight;};
-    window.addEventListener("resize",resize);
-    return ()=>{cancelAnimationFrame(frame);window.removeEventListener("resize",resize);};
-  },[]);
-  return <canvas ref={ref} style={{position:"fixed",inset:0,zIndex:0,pointerEvents:"none"}}/>;
+// ─── Status config ────────────────────────────────────────────────────────────
+const STATUS = {
+  confirmado: { label: 'Confirmado', color: C.ok,   bg: C.okBg,   bd: C.okBd   },
+  pendiente:  { label: 'En espera',  color: C.wait, bg: C.waitBg, bd: C.waitBd },
+  cancelado:  { label: 'Cancelado',  color: C.can,  bg: C.canBg,  bd: C.canBd  },
+  completado: { label: 'Completado', color: C.done, bg: C.doneBg, bd: C.doneBd },
+}
+const stCfg = s => STATUS[s?.toLowerCase()] || { label: s || '—', color: C.textDim, bg: C.panel, bd: C.border }
+
+// ─── Grid constants ───────────────────────────────────────────────────────────
+const HOUR_H = 56, START_H = 7, END_H = 20
+const HOURS  = Array.from({ length: END_H - START_H }, (_, i) => i + START_H)
+const DOW    = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom']
+const DOWL   = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo']
+const MES    = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre']
+const TOTAL_H = (END_H - START_H) * HOUR_H
+
+// ─── Date helpers ─────────────────────────────────────────────────────────────
+const p2      = n  => String(n).padStart(2, '0')
+const toISO   = d  => `${d.getFullYear()}-${p2(d.getMonth()+1)}-${p2(d.getDate())}`
+const addD    = (d, n) => { const r = new Date(d); r.setDate(r.getDate() + n); return r }
+const monday  = d  => { const r = new Date(d), day = r.getDay(); r.setDate(r.getDate() - (day === 0 ? 6 : day - 1)); return r }
+const dowIdx  = d  => (d.getDay() + 6) % 7
+const isToday = d  => toISO(new Date()) === toISO(d)
+const fmtH    = s  => s ? new Date(s).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' }) : '--'
+const evTop   = s  => { if (!s) return 0; const d = new Date(s); return Math.max(0, (d.getHours() * 60 + d.getMinutes() - START_H * 60) / 60 * HOUR_H) }
+const evHpx   = (s, e) => { if (!s || !e) return 28; return Math.max((new Date(e) - new Date(s)) / 60000 / 60 * HOUR_H - 4, 28) }
+const nowPx   = ()  => { const n = new Date(); return (n.getHours() * 60 + n.getMinutes() - START_H * 60) / 60 * HOUR_H }
+
+// Detecta huecos ≥ 45 min entre turnos (IA free-slot hint, frontend-only)
+function freeSlots(turnos) {
+  const v = turnos
+    .filter(t => t.fecha_inicio && t.fecha_fin)
+    .map(t => ({ s: new Date(t.fecha_inicio).getHours() * 60 + new Date(t.fecha_inicio).getMinutes(), e: new Date(t.fecha_fin).getHours() * 60 + new Date(t.fecha_fin).getMinutes() }))
+    .sort((a, b) => a.s - b.s)
+  const slots = []; let cur = START_H * 60
+  for (const { s, e } of v) { if (s - cur >= 45) slots.push({ s: cur, e: s, dur: s - cur }); cur = Math.max(cur, e) }
+  if (END_H * 60 - cur >= 45) slots.push({ s: cur, e: END_H * 60, dur: END_H * 60 - cur })
+  return slots
 }
 
-// ─── NavBar ───────────────────────────────────────────────────────────────────
-function NavBar({navigate,onLogout,mode,onToggle}) {
+// ─── Componentes pequeños ─────────────────────────────────────────────────────
+function Badge({ estado }) {
+  const c = stCfg(estado)
+  return <span style={{ display: 'inline-flex', alignItems: 'center', padding: '3px 10px', borderRadius: 20, fontSize: 12, fontWeight: 700, background: c.bg, color: c.color, border: `1px solid ${c.bd}` }}>{c.label}</span>
+}
+
+function Spinner() {
   return (
-    <nav style={{
-      position:"sticky",top:0,zIndex:200,height:60,
-      display:"flex",alignItems:"center",justifyContent:"space-between",
-      padding:"0 28px",
-      background:"rgba(5,5,16,0.85)",
-      borderBottom:`1px solid ${DS.borderCard}`,
-      backdropFilter:"blur(20px)",
-      boxShadow:"0 1px 0 rgba(37,99,235,0.15)",
-      fontFamily:DS.font,
-    }}>
-      <div style={{display:"flex",alignItems:"center",gap:10}}>
-        <div style={{
-          width:32,height:32,borderRadius:8,
-          background:DS.gradient,
-          display:"flex",alignItems:"center",justifyContent:"center",
-          fontSize:16, boxShadow:"0 0 12px rgba(37,99,235,0.4)",
-        }}>⚙️</div>
-        <div>
-          <span style={{fontWeight:700,fontSize:16,color:DS.text,letterSpacing:1}}>TurnoIA</span>
-          <span style={{fontSize:9,textTransform:"uppercase",letterSpacing:3,color:DS.textSec,marginLeft:8}}>
-            Gestión de turnos
-          </span>
+    <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', padding: 60 }}>
+      <div style={{ width: 26, height: 26, borderRadius: '50%', border: `3px solid ${C.border}`, borderTopColor: C.accent, animation: 'ag-spin .7s linear infinite' }} />
+    </div>
+  )
+}
+
+// ─── TopNav ───────────────────────────────────────────────────────────────────
+function TopNav({ negocio, onNav, onLogout }) {
+  const init = (negocio?.nombre || 'T')[0].toUpperCase()
+  const items = [
+    { l: 'Agenda',         p: '/agenda',        active: true },
+    { l: 'Pacientes',      p: '/clientes' },
+    { l: 'Profesionales',  p: '/profesionales' },
+    { l: 'Reportes',       p: null },
+    { l: 'Configuración',  p: null },
+  ]
+  return (
+    <nav style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '0 28px', height: 60, flexShrink: 0, borderBottom: `1px solid ${C.border}`, background: 'rgba(7,10,18,.88)', backdropFilter: 'blur(12px)', position: 'sticky', top: 0, zIndex: 30 }}>
+      {/* Brand */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginRight: 18 }}>
+        <div style={{ width: 34, height: 34, borderRadius: 10, flexShrink: 0, background: `linear-gradient(150deg,${C.accent},${C.accent2})`, display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: `0 4px 14px rgba(43,130,246,.4)` }}>
+          <svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="#04263f" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+            <rect x="3" y="4.5" width="18" height="16" rx="3" /><path d="M3 9h18M8 2.5v4M16 2.5v4" /><circle cx="12" cy="14.5" r="2.4" />
+          </svg>
         </div>
+        <span style={{ fontWeight: 800, fontSize: 17, letterSpacing: -.3 }}>Turno<span style={{ color: C.accent }}>IA</span></span>
       </div>
-      <div style={{display:"flex",alignItems:"center",gap:4}}>
-        <NavLnk active onClick={()=>navigate("/agenda")}>📅 Agenda</NavLnk>
-        <NavLnk onClick={()=>navigate("/profesionales")}>👤 Profesionales</NavLnk>
-        <NavLnk onClick={()=>navigate("/clientes")}>🧑‍🤝‍🧑 Clientes</NavLnk>
-        <div style={{width:1,height:22,background:DS.border,margin:"0 8px"}}/>
-        <button onClick={onLogout} style={{
-          padding:"4px 12px",borderRadius:7,border:`1px solid rgba(220,38,38,0.3)`,
-          background:"transparent",color:DS.errorText,fontSize:12,fontWeight:600,
-          cursor:"pointer",fontFamily:DS.font,transition:"all .15s",
-        }}>Salir</button>
+      {/* Nav items */}
+      <div style={{ display: 'flex', gap: 4 }}>
+        {items.map(({ l, p, active }) => (
+          <button key={l} className="ag-nb" onClick={() => p && onNav(p)} style={{ padding: '8px 13px', borderRadius: 9, fontWeight: 600, fontSize: 13.5, color: active ? C.text : C.textDim, background: active ? C.panel2 : 'transparent', boxShadow: active ? `inset 0 0 0 1px ${C.borderStrong}` : 'none', border: 'none', cursor: p ? 'pointer' : 'default', transition: '.15s' }}>
+            {l}
+          </button>
+        ))}
+      </div>
+      <div style={{ flex: 1 }} />
+      {/* Right */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+        <button className="ag-gb" onClick={onLogout} style={{ padding: '7px 14px', borderRadius: 9, fontWeight: 600, fontSize: 13, color: C.can, background: 'rgba(248,113,113,.1)', border: `1px solid rgba(248,113,113,.25)`, cursor: 'pointer', transition: '.15s' }}>
+          Salir
+        </button>
+        <div style={{ width: 36, height: 36, borderRadius: '50%', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: 14, color: '#04263f', background: `linear-gradient(150deg,${C.accent},${C.accent2})` }}>
+          {init}
+        </div>
       </div>
     </nav>
-  );
-}
-function NavLnk({children,onClick,active}){
-  const [hov,hp]=useHover();
-  return(
-    <button onClick={onClick} {...hp} style={{
-      padding:"4px 12px",borderRadius:7,border:"none",cursor:"pointer",
-      fontSize:12,fontWeight:active?700:500,fontFamily:DS.font,
-      background:active?"rgba(37,99,235,0.2)":hov?"rgba(255,255,255,0.05)":"transparent",
-      color:active?DS.cyan:hov?DS.textSec:DS.textDis,
-      transition:"all .15s",
-    }}>{children}</button>
-  );
+  )
 }
 
-// ─── DateNav ──────────────────────────────────────────────────────────────────
-function DateNav({fecha,onChange}){
-  const shift=d=>{const dt=new Date(fecha+"T12:00");dt.setDate(dt.getDate()+d);onChange(dt.toISOString().split("T")[0]);};
-  return(
-    <div style={{display:"flex",alignItems:"center",gap:3,background:DS.inputBg,border:`1px solid ${DS.border}`,borderRadius:9,padding:3}}>
-      <ArrBtn onClick={()=>shift(-1)}>‹</ArrBtn>
-      <input type="date" value={fecha} onChange={e=>onChange(e.target.value)} style={{
-        border:"none",background:"transparent",outline:"none",cursor:"pointer",
-        fontSize:13,fontWeight:600,color:DS.text,fontFamily:DS.font,
-        padding:"0 4px",colorScheme:"dark",
-      }}/>
-      <ArrBtn onClick={()=>shift(1)}>›</ArrBtn>
-      {fecha!==hoyISO()&&<button onClick={()=>onChange(hoyISO())} style={{
-        border:`1px solid ${DS.border}`,background:"transparent",borderRadius:6,
-        fontSize:11,fontWeight:700,color:DS.cyan,cursor:"pointer",
-        padding:"2px 7px",fontFamily:DS.font,
-      }}>Hoy</button>}
+// ─── KPI strip ────────────────────────────────────────────────────────────────
+function KPIs({ turnos }) {
+  const n = { p: 0, c: 0, ca: 0, co: 0 }
+  turnos.forEach(t => {
+    const s = t.estado?.toLowerCase()
+    if (s === 'pendiente') n.p++
+    else if (s === 'confirmado') n.c++
+    else if (s === 'cancelado') n.ca++
+    else if (s === 'completado') n.co++
+  })
+  const pct = turnos.length ? Math.round(n.co / turnos.length * 100) : 0
+  const cards = [
+    { l: 'Turnos del día', v: turnos.length, sub: `${n.c} confirmados`,     ac: C.accent },
+    { l: 'En espera',      v: n.p,           sub: 'pendientes de confirmar', ac: C.wait },
+    { l: 'Completados',    v: n.co,          sub: `${pct}% del día`,         ac: C.ok },
+    { l: 'Cancelados',     v: n.ca,          sub: 'en esta fecha',           ac: C.can },
+  ]
+  return (
+    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 14, marginBottom: 20 }}>
+      {cards.map((c, i) => (
+        <div key={i} style={{ padding: '16px 18px', borderRadius: 14, background: C.panel, boxShadow: `inset 0 0 0 1px ${C.border}`, position: 'relative', overflow: 'hidden' }}>
+          <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 2, background: `linear-gradient(90deg,${c.ac},transparent)` }} />
+          <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: 1, color: C.textMute, textTransform: 'uppercase' }}>{c.l}</div>
+          <div style={{ fontSize: 32, fontWeight: 800, letterSpacing: -1, marginTop: 8, lineHeight: 1, color: C.text, fontVariantNumeric: 'tabular-nums' }}>{c.v}</div>
+          <div style={{ fontSize: 12, color: C.textDim, marginTop: 8 }}>{c.sub}</div>
+        </div>
+      ))}
     </div>
-  );
-}
-function ArrBtn({children,onClick}){
-  const [hov,hp]=useHover();
-  return(
-    <button onClick={onClick} {...hp} style={{
-      width:26,height:26,border:"none",borderRadius:5,cursor:"pointer",
-      background:hov?"rgba(37,99,235,0.25)":"transparent",
-      color:hov?DS.cyan:DS.textDis,
-      fontSize:15,display:"flex",alignItems:"center",justifyContent:"center",
-      fontFamily:DS.font,transition:"all .12s",
-    }}>{children}</button>
-  );
-}
-function PrimaryBtn({children,onClick}){
-  const [hov,hp]=useHover();
-  return(
-    <button onClick={onClick} {...hp} style={{
-      padding:"7px 16px",background:DS.gradient,color:"#fff",
-      border:"none",borderRadius:8,fontWeight:700,fontSize:13,
-      cursor:"pointer",fontFamily:DS.font,
-      filter:hov?"brightness(1.15)":"none",
-      transform:hov?"translateY(-1px)":"none",
-      boxShadow:hov?"0 4px 16px rgba(37,99,235,0.4)":"none",
-      transition:"all .15s",whiteSpace:"nowrap",
-    }}>{children}</button>
-  );
+  )
 }
 
-// ─── Filtro especialidad ──────────────────────────────────────────────────────
-function SpecFilter({specs,value,onChange}){
-  return(
-    <div style={{display:"flex",alignItems:"center",gap:6,flexWrap:"wrap"}}>
-      <span style={{fontSize:11,fontWeight:500,color:DS.textSec,textTransform:"uppercase",letterSpacing:1}}>🔬 Especialidad:</span>
-      {["Todas",...specs].map(sp=>{
-        const active=value===sp;
-        const [bg,fg]=SPEC_COLORS[sp]||["rgba(37,99,235,0.18)","#60a5fa"];
-        const [hov,hp]=useHover();
-        return(
-          <button key={sp} onClick={()=>onChange(sp)} {...hp} style={{
-            padding:"3px 12px",borderRadius:99,cursor:"pointer",
-            fontSize:11,fontWeight:active?700:500,fontFamily:DS.font,
-            border:`1px solid ${active?fg:"rgba(255,255,255,0.1)"}`,
-            background:active?bg:hov?"rgba(255,255,255,0.05)":"transparent",
-            color:active?fg:DS.textDis,transition:"all .12s",
-          }}>{sp}</button>
-        );
-      })}
+// ─── Grid infra compartida ────────────────────────────────────────────────────
+function Gutter() {
+  return (
+    <div style={{ width: 58, flexShrink: 0, borderRight: `1px solid ${C.border}` }}>
+      {HOURS.map(h => (
+        <div key={h} style={{ height: HOUR_H, position: 'relative' }}>
+          <span style={{ position: 'absolute', top: -8, right: 8, fontSize: 11, color: C.textMute, fontWeight: 600, fontVariantNumeric: 'tabular-nums' }}>{p2(h)}:00</span>
+        </div>
+      ))}
     </div>
-  );
+  )
 }
 
-// ─── StatCard ─────────────────────────────────────────────────────────────────
-function StatCard({icon,label,value,color}){
-  return(
-    <div style={{
-      display:"flex",alignItems:"center",gap:10,
-      background:DS.cardBg,border:`1px solid ${DS.borderCard}`,
-      borderRadius:10,padding:"9px 14px",minWidth:120,
-      backdropFilter:"blur(12px)",
-    }}>
-      <div style={{width:32,height:32,borderRadius:7,display:"flex",alignItems:"center",justifyContent:"center",fontSize:14,background:color+"33"}}>{icon}</div>
-      <div>
-        <div style={{fontSize:18,fontWeight:700,color:DS.text,lineHeight:1,fontFamily:DS.font}}>{value}</div>
-        <div style={{fontSize:10,color:DS.textSec,marginTop:2,textTransform:"uppercase",letterSpacing:1}}>{label}</div>
-      </div>
+function HLines() {
+  return HOURS.map(h => <div key={h} style={{ position: 'absolute', left: 0, right: 0, top: (h - START_H) * HOUR_H, borderTop: `1px solid rgba(255,255,255,.04)`, pointerEvents: 'none' }} />)
+}
+
+function NowLine() {
+  const t = nowPx()
+  if (t < 0 || t > TOTAL_H) return null
+  return (
+    <div style={{ position: 'absolute', left: 0, right: 0, top: t, height: 2, background: C.accent, zIndex: 4, pointerEvents: 'none' }}>
+      <div style={{ position: 'absolute', left: -4, top: -4, width: 10, height: 10, borderRadius: '50%', background: C.accent, boxShadow: `0 0 8px ${C.accent}` }} />
     </div>
-  );
+  )
 }
 
-// ─── Avatar ───────────────────────────────────────────────────────────────────
-function Avatar({nombre,idx,size=28}){
-  const [c1,c2]=AVATAR_G[idx%AVATAR_G.length];
-  return(
-    <div style={{
-      width:size,height:size,borderRadius:"50%",flexShrink:0,
-      background:`linear-gradient(135deg,${c1},${c2})`,
-      display:"flex",alignItems:"center",justifyContent:"center",
-      color:"#fff",fontSize:size*.38,fontWeight:700,fontFamily:DS.font,
-      boxShadow:`0 0 8px ${c1}66`,
-    }}>{(nombre||"?").charAt(0).toUpperCase()}</div>
-  );
-}
-
-// ─── Badge especialidad ───────────────────────────────────────────────────────
-function SpecBadge({especialidad}){
-  if(!especialidad)return null;
-  const [bg,fg]=SPEC_COLORS[especialidad]||["rgba(37,99,235,0.18)","#60a5fa"];
-  return(
-    <span style={{padding:"2px 8px",borderRadius:99,fontSize:9,fontWeight:700,background:bg,color:fg,
-                  textTransform:"uppercase",letterSpacing:1,fontFamily:DS.font,whiteSpace:"nowrap"}}>
-      {especialidad}
-    </span>
-  );
-}
-
-// ─── Slot ─────────────────────────────────────────────────────────────────────
-function SlotCell({slot,turno,onOcupado,onDisponible}){
-  const [hov,hp]=useHover();
-  const estado=!slot?"libre":slot.disponible?"disponible":"ocupado";
-  const cfg=SLOT_S[estado];
-  const click=estado!=="libre";
-  const handle=()=>{ if(estado==="ocupado"&&turno)onOcupado(turno); else if(estado==="disponible")onDisponible(slot); };
-  return(
-    <div {...(click?{...hp,onClick:handle}:{})}
-      style={{
-        flex:1,minWidth:0,margin:"1px 3px",borderRadius:5,
-        border:`1px solid ${cfg.border}`,background:hov&&click?cfg.bg+"cc":cfg.bg,
-        color:cfg.fg,cursor:click?"pointer":"default",
-        display:"flex",flexDirection:"column",justifyContent:"center",alignItems:"center",
-        padding:"3px 4px",overflow:"hidden",
-        transition:"all .12s",
-        transform:hov&&click?"scale(1.04)":"scale(1)",
-        boxShadow:hov&&click?`0 2px 12px ${DS.blue}44`:"none",
-        minHeight:36,fontFamily:DS.font,
-      }}>
-      {estado==="ocupado"&&turno?(
-        <>
-          <span style={{fontSize:9,fontWeight:700,textAlign:"center",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",maxWidth:"100%",width:"100%",paddingLeft:2,paddingRight:2}}>{turno.cliente?.nombre||"Turno"}</span>
-          <span style={{fontSize:8,opacity:.75,marginTop:1}}>{formatHora(turno.fecha_inicio)}</span>
-        </>
-      ):estado==="disponible"?(
-        <span style={{fontSize:9,fontWeight:600,opacity:.9}}>Disponible</span>
-      ):(
-        <span style={{fontSize:9,opacity:.2}}>—</span>
-      )}
+function EvCard({ t, onEdit, compact }) {
+  const c = stCfg(t.estado)
+  return (
+    <div className="ag-ev" onClick={() => onEdit(t)} style={{ position: 'absolute', top: evTop(t.fecha_inicio), height: evHpx(t.fecha_inicio, t.fecha_fin), left: compact ? 3 : 5, right: compact ? 3 : 5, borderRadius: 9, padding: compact ? '4px 6px 4px 9px' : '6px 9px 6px 12px', background: c.bg, boxShadow: `inset 0 0 0 1px ${C.borderStrong}`, cursor: 'pointer', overflow: 'hidden', transition: 'transform .12s', zIndex: 2 }}>
+      <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: 3, background: c.color, borderRadius: 3 }} />
+      <div style={{ fontSize: 10, fontWeight: 700, color: c.color, fontVariantNumeric: 'tabular-nums' }}>{fmtH(t.fecha_inicio)}</div>
+      {!compact && <div style={{ fontWeight: 700, fontSize: 12, marginTop: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', color: C.text }}>{t.cliente?.nombre || '—'}</div>}
+      {!compact && <div style={{ fontSize: 11, color: C.textDim, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{t.profesional?.nombre || '—'}</div>}
     </div>
-  );
+  )
 }
 
-// ─── Loading / Error ──────────────────────────────────────────────────────────
-function Loading({msg="Cargando..."}){
-  return(
-    <div style={{display:"flex",flexDirection:"column",alignItems:"center",padding:"48px 0",gap:12,color:DS.textSec,fontFamily:DS.font}}>
-      <div style={{width:28,height:28,borderRadius:"50%",border:`2px solid ${DS.border}`,borderTopColor:DS.cyan,animation:"spin .7s linear infinite"}}/>
-      <span style={{fontSize:13}}>{msg}</span>
+function FreeSlot({ slot }) {
+  const hS = Math.floor(slot.s / 60), mS = slot.s % 60, hE = Math.floor(slot.e / 60), mE = slot.e % 60
+  return (
+    <div style={{ position: 'absolute', top: (slot.s - START_H * 60) / 60 * HOUR_H, height: Math.max(slot.dur / 60 * HOUR_H - 4, 22), left: 5, right: 5, zIndex: 1, borderRadius: 7, padding: '4px 10px', background: `repeating-linear-gradient(135deg,${C.aiBg} 0 8px,transparent 8px 16px)`, border: `1px dashed ${C.aiBd}`, display: 'flex', alignItems: 'center', gap: 7, overflow: 'hidden' }}>
+      <span style={{ color: C.ai, fontWeight: 700, fontSize: 11 }}>✦</span>
+      <span style={{ color: C.textDim, fontSize: 11, whiteSpace: 'nowrap' }}>{p2(hS)}:{p2(mS)} – {p2(hE)}:{p2(mE)} · {slot.dur} min libres</span>
     </div>
-  );
-}
-function ErrorBanner({msg,onRetry}){
-  return(
-    <div style={{background:DS.errorBg,border:`1px solid ${DS.errorBorder}`,borderRadius:9,padding:"10px 14px",marginBottom:12,fontSize:13,color:DS.errorText,display:"flex",alignItems:"center",justifyContent:"space-between",fontFamily:DS.font}}>
-      <span>⚠ {msg}</span>
-      {onRetry&&<button onClick={onRetry} style={{background:"none",border:"none",color:DS.errorText,cursor:"pointer",fontWeight:700,fontSize:12,fontFamily:DS.font}}>Reintentar</button>}
-    </div>
-  );
+  )
 }
 
-// ─── Tarjeta de clínica ───────────────────────────────────────────────────────
-function ClinicCard({especialidad,profesionales,disponibilidad,turnoIdx,allHoras,onOcupado,onDisponible,defaultOpen=true}){
-  const [open,setOpen]=useState(defaultOpen);
-  const [hov,hp]=useHover();
-  const [a1,a2]=CLINIC_ACCENT[especialidad]||CLINIC_ACCENT["General"];
-  const [specBg,specFg]=SPEC_COLORS[especialidad]||["rgba(37,99,235,0.18)","#60a5fa"];
-
-  const totalDisp=profesionales.reduce((acc,p)=>{return acc+(disponibilidad[p.id]||[]).filter(s=>s.disponible).length;},0);
-  const totalOcup=profesionales.reduce((acc,p)=>{return acc+Object.keys(turnoIdx[p.id]||{}).length;},0);
-
-  const CLINIC_ICON={"Clínica":"🏥","Kinesiología":"🦴","Nutrición":"🥗","Odontología":"🦷","Psicología":"🧠","Cardiología":"❤️"};
-
-  return(
-    <div style={{
-      background:DS.cardBg,border:`1px solid ${DS.borderCard}`,
-      borderRadius:14,overflow:"hidden",marginBottom:12,
-      backdropFilter:"blur(20px)",
-      boxShadow:`0 4px 24px rgba(0,0,0,0.4)`,
-      transition:"box-shadow .2s",
-    }}>
-      {/* Header colapsable */}
-      <div {...hp} onClick={()=>setOpen(o=>!o)} style={{
-        display:"flex",alignItems:"center",justifyContent:"space-between",
-        padding:"12px 18px",cursor:"pointer",userSelect:"none",
-        background:hov?"rgba(37,99,235,0.06)":"transparent",
-        borderBottom:open?`1px solid ${DS.borderCard}`:"none",
-        transition:"background .15s",
-      }}>
-        <div style={{display:"flex",alignItems:"center",gap:12}}>
-          <div style={{
-            width:40,height:40,borderRadius:10,flexShrink:0,
-            background:`linear-gradient(135deg,${a1},${a2})`,
-            display:"flex",alignItems:"center",justifyContent:"center",
-            fontSize:18,boxShadow:`0 2px 12px ${a1}55`,
-          }}>{CLINIC_ICON[especialidad]||"🏪"}</div>
-          <div>
-            <div style={{display:"flex",alignItems:"center",gap:8}}>
-              <span style={{fontSize:15,fontWeight:700,color:DS.text,fontFamily:DS.font}}>{especialidad}</span>
-              <span style={{padding:"1px 8px",borderRadius:99,fontSize:9,fontWeight:700,background:specBg,color:specFg,textTransform:"uppercase",letterSpacing:.5}}>{profesionales.length} prof.</span>
-            </div>
-            <div style={{display:"flex",gap:12,marginTop:3}}>
-              <span style={{fontSize:10,color:"#6ee7b7",fontWeight:600}}>✅ {totalDisp} disponibles</span>
-              <span style={{fontSize:10,color:DS.cyan,fontWeight:600}}>📋 {totalOcup} ocupados</span>
-            </div>
+// ─── Vista DÍA ────────────────────────────────────────────────────────────────
+function DayView({ turnos, date, onEdit }) {
+  const slots = freeSlots(turnos)
+  return (
+    <div>
+      {/* Header del día */}
+      <div style={{ display: 'flex', borderBottom: `1px solid ${C.border}` }}>
+        <div style={{ width: 58, flexShrink: 0, borderRight: `1px solid ${C.border}` }} />
+        <div style={{ flex: 1, padding: '14px 20px', background: isToday(date) ? 'rgba(56,189,248,.05)' : 'transparent' }}>
+          <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: 1, color: C.textMute, textTransform: 'uppercase' }}>{DOWL[dowIdx(date)]}</div>
+          <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, marginTop: 4 }}>
+            <span style={{ fontSize: 28, fontWeight: 800, letterSpacing: -1, color: isToday(date) ? C.accent : C.text, fontVariantNumeric: 'tabular-nums' }}>{date.getDate()}</span>
+            <span style={{ fontSize: 16, color: C.textDim, fontWeight: 600 }}>{MES[date.getMonth()]} {date.getFullYear()}</span>
+          </div>
+          <div style={{ fontSize: 12, color: C.textDim, marginTop: 5 }}>
+            {turnos.length} turno{turnos.length !== 1 ? 's' : ''} · {turnos.filter(t => t.estado === 'confirmado').length} confirmados · {turnos.filter(t => t.estado === 'pendiente').length} en espera
           </div>
         </div>
-        <div style={{display:"flex",alignItems:"center",gap:10}}>
-          <div style={{display:"flex"}}>
-            {profesionales.slice(0,4).map((p,i)=>(
-              <div key={p.id} style={{marginLeft:i>0?-7:0,zIndex:4-i,position:"relative",border:`2px solid rgba(5,5,16,0.9)`,borderRadius:"50%"}}>
-                <Avatar nombre={p.nombre} idx={i} size={24}/>
-              </div>
-            ))}
-          </div>
-          <div style={{
-            width:24,height:24,borderRadius:"50%",
-            display:"flex",alignItems:"center",justifyContent:"center",
-            background:"rgba(37,99,235,0.2)",color:DS.cyan,fontSize:12,fontWeight:700,
-            transform:open?"rotate(180deg)":"rotate(0deg)",transition:"transform .25s",
-          }}>▾</div>
-        </div>
       </div>
-
-      {/* Contenido */}
-      <div style={{maxHeight:open?"1200px":"0",overflow:"hidden",transition:"max-height .35s cubic-bezier(.4,0,.2,1)"}}>
-        <div style={{overflowX:"auto"}}>
-          <table style={{width:"100%",borderCollapse:"collapse",minWidth:68+profesionales.length*130}}>
-            <thead>
-              <tr style={{background:"rgba(15,23,42,0.8)"}}>
-                <th style={{width:64,padding:"9px 6px",borderBottom:`1px solid ${DS.borderCard}`,borderRight:`1px solid ${DS.borderCard}`,position:"sticky",left:0,background:"rgba(15,23,42,0.95)",zIndex:2}}>
-                  <span style={{fontSize:9,color:DS.textSec,fontWeight:700,textTransform:"uppercase",letterSpacing:1,fontFamily:DS.font}}>Hora</span>
-                </th>
-                {profesionales.map((prof,pi)=>(
-                  <th key={prof.id} style={{padding:"11px 6px 10px",borderBottom:`1px solid ${DS.borderCard}`,borderLeft:`1px solid ${DS.borderCard}`,minWidth:130,fontWeight:"normal",background:pi%2===1?"rgba(255,255,255,0.02)":"transparent"}}>
-                    <div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:5}}>
-                      <Avatar nombre={prof.nombre} idx={pi} size={28}/>
-                      <span style={{fontSize:11,fontWeight:700,color:DS.text,textAlign:"center",lineHeight:1.2,fontFamily:DS.font}}>{prof.nombre}</span>
-                    </div>
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {allHoras.length===0?(
-                <tr><td colSpan={profesionales.length+1}>
-                  <div style={{textAlign:"center",padding:"24px 0",color:DS.textDis,fontSize:12,fontFamily:DS.font}}>Sin horarios configurados.</div>
-                </td></tr>
-              ):allHoras.map((hora,hi)=>{
-                const esCadaHora=hora.endsWith(":00");
-                return(
-                  <tr key={hora} style={{borderBottom:`1px solid ${esCadaHora?DS.borderCard:"rgba(30,41,59,0.4)"}`,background:hi%2===0?"transparent":"rgba(255,255,255,0.015)"}}>
-                    <td style={{width:64,padding:"3px 6px",borderRight:`1px solid ${DS.borderCard}`,position:"sticky",left:0,zIndex:1,background:hi%2===0?"rgba(5,5,16,0.95)":"rgba(10,15,30,0.95)",textAlign:"center"}}>
-                      <span style={{fontSize:esCadaHora?11:10,fontWeight:esCadaHora?700:400,color:esCadaHora?DS.text:DS.textDis,fontFamily:DS.fontMono||DS.font}}>{hora}</span>
-                    </td>
-                    {profesionales.map((prof,pi)=>{
-                      const slots=disponibilidad[prof.id]||[];
-                      const slot=slots.find(s=>s.hora===hora)||null;
-                      const turno=turnoIdx[prof.id]?.[hora]||null;
-                      return(
-                        <td key={prof.id} style={{padding:"2px 0",borderLeft:`1px solid ${DS.borderCard}`,background:pi%2===1?"rgba(255,255,255,0.015)":"transparent"}}>
-                          <div style={{display:"flex",padding:"0 2px"}}>
-                            <SlotCell slot={slot} turno={turno} onOcupado={onOcupado} onDisponible={s=>onDisponible(prof,s)}/>
-                          </div>
-                        </td>
-                      );
-                    })}
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
-        {/* Leyenda */}
-        <div style={{display:"flex",alignItems:"center",gap:16,padding:"7px 16px",borderTop:`1px solid ${DS.borderCard}`,background:"rgba(15,23,42,0.6)"}}>
-          <span style={{fontSize:9,fontWeight:700,color:DS.textDis,textTransform:"uppercase",letterSpacing:1,fontFamily:DS.font}}>Ref:</span>
-          {[{bg:SLOT_S.ocupado.bg,brd:SLOT_S.ocupado.border,lbl:"Ocupado"},
-            {bg:SLOT_S.disponible.bg,brd:SLOT_S.disponible.border,lbl:"Disponible"},
-            {bg:SLOT_S.libre.bg,brd:SLOT_S.libre.border,lbl:"Sin horario"}
-          ].map(({bg,brd,lbl})=>(
-            <div key={lbl} style={{display:"flex",alignItems:"center",gap:5}}>
-              <div style={{width:9,height:9,borderRadius:2,background:bg,border:`1px solid ${brd}`}}/>
-              <span style={{fontSize:10,color:DS.textSec,fontFamily:DS.font}}>{lbl}</span>
-            </div>
-          ))}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// ─── PÁGINA PRINCIPAL ─────────────────────────────────────────────────────────
-export default function Agenda(){
-  const navigate=useNavigate();
-  const {logout}=useAuth();
-  const [fecha,setFecha]=useState(hoyISO());
-  const [profes,setProfes]=useState([]);
-  const [disp,setDisp]=useState({});
-  const [turnos,setTurnos]=useState([]);
-  const [filtroSpec,setFiltroSpec]=useState("Todas");
-  const [loadingProf,setLoadingProf]=useState(true);
-  const [loadingGrid,setLoadingGrid]=useState(false);
-  const [errorProf,setErrorProf]=useState("");
-  const [errorGrid,setErrorGrid]=useState("");
-
-  const fetchProfes=useCallback(async()=>{
-    setLoadingProf(true);setErrorProf("");
-    try{const r=await api.get("/profesionales");setProfes((r.data||[]).filter(p=>p.activo!==false));}
-    catch(e){setErrorProf(e.response?.data?.detail||e.message||"Error al cargar profesionales.");}
-    finally{setLoadingProf(false);}
-  },[]);
-  useEffect(()=>{fetchProfes();},[fetchProfes]);
-
-  const fetchGrid=useCallback(async()=>{
-    if(!profes.length)return;
-    setLoadingGrid(true);setErrorGrid("");
-    try{
-      const[dR,tR]=await Promise.all([
-        Promise.allSettled(profes.map(p=>api.get("/disponibilidad",{params:{profesional_id:p.id,fecha}}))),
-        api.get("/turnos",{params:{fecha}}),
-      ]);
-      const nd={};profes.forEach((p,i)=>{nd[p.id]=dR[i].status==="fulfilled"?dR[i].value.data:[];});
-      setDisp(nd);setTurnos(tR.data||[]);
-    }catch(e){setErrorGrid(e.response?.data?.detail||e.message||"Error al cargar la agenda.");}
-    finally{setLoadingGrid(false);}
-  },[profes,fecha]);
-  useEffect(()=>{fetchGrid();},[fetchGrid]);
-
-  const specs=[...new Set(profes.map(p=>p.especialidad).filter(Boolean))].sort();
-  const profsFiltrados=filtroSpec==="Todas"?profes:profes.filter(p=>p.especialidad===filtroSpec);
-  const allHoras=[...new Set(Object.values(disp).flatMap(s=>s.map(x=>x.hora)))].sort();
-  const turnoIdx={};
-  turnos.forEach(t=>{const pid=t.profesional?.id;if(!pid)return;if(!turnoIdx[pid])turnoIdx[pid]={};turnoIdx[pid][formatHora(t.fecha_inicio)]=t;});
-  const grupos={};profsFiltrados.forEach(p=>{const k=p.especialidad||"General";if(!grupos[k])grupos[k]=[];grupos[k].push(p);});
-  const totalDisp=Object.values(disp).flatMap(s=>s).filter(s=>s.disponible).length;
-
-  return(
-    <>
-      <style>{`@keyframes spin{to{transform:rotate(360deg);}}*{box-sizing:border-box;}::-webkit-scrollbar{width:5px;height:5px;}::-webkit-scrollbar-track{background:transparent;}::-webkit-scrollbar-thumb{background:#1e293b;border-radius:3px;}`}</style>
-      <Starfield/>
-      <div style={{minHeight:"100vh",fontFamily:DS.font,position:"relative",zIndex:1}}>
-        <NavBar navigate={navigate} onLogout={()=>{logout();navigate("/login");}}/>
-        <main style={{maxWidth:1400,margin:"0 auto",padding:"22px 28px"}}>
-
-          {/* Header */}
-          <div style={{display:"flex",alignItems:"flex-start",justifyContent:"space-between",flexWrap:"wrap",gap:12,marginBottom:14}}>
-            <div>
-              <h1 style={{margin:0,fontSize:20,fontWeight:700,color:DS.text,letterSpacing:-.5}}>📅 Agenda de hoy</h1>
-              <p style={{margin:"3px 0 0",fontSize:12,color:DS.textSec,textTransform:"capitalize"}}>{formatTitulo(fecha)}</p>
-            </div>
-            <div style={{display:"flex",alignItems:"center",gap:10,flexWrap:"wrap"}}>
-              <DateNav fecha={fecha} onChange={setFecha}/>
-              <PrimaryBtn onClick={()=>navigate("/nuevo-turno")}>+ Nuevo turno</PrimaryBtn>
-            </div>
-          </div>
-
-          {specs.length>0&&<div style={{marginBottom:14}}><SpecFilter specs={specs} value={filtroSpec} onChange={setFiltroSpec}/></div>}
-          {errorProf&&<ErrorBanner msg={errorProf} onRetry={fetchProfes}/>}
-          {errorGrid&&<ErrorBanner msg={errorGrid} onRetry={fetchGrid}/>}
-
-          {/* Stats */}
-          {!loadingProf&&!errorProf&&(
-            <div style={{display:"flex",gap:9,flexWrap:"wrap",marginBottom:18}}>
-              <StatCard icon="🏥" label="Clínicas"      value={Object.keys(grupos).length} color={DS.blue}/>
-              <StatCard icon="👤" label="Profesionales" value={profsFiltrados.length}       color="#8b5cf6"/>
-              <StatCard icon="✅" label="Disponibles"   value={totalDisp}                   color={DS.cyan}/>
-              <StatCard icon="📋" label="Turnos"        value={turnos.length}               color="#f59e0b"/>
+      {/* Timeline */}
+      <div className="ag-scroll" style={{ display: 'flex', maxHeight: 580, overflowY: 'auto' }}>
+        <Gutter />
+        <div style={{ flex: 1, position: 'relative', height: TOTAL_H, background: isToday(date) ? 'rgba(56,189,248,.015)' : 'transparent' }}>
+          <HLines />
+          {isToday(date) && <NowLine />}
+          {slots.map((s, i) => <FreeSlot key={i} slot={s} />)}
+          {turnos.filter(t => t.fecha_inicio).map(t => <EvCard key={t.id} t={t} onEdit={onEdit} />)}
+          {turnos.length === 0 && (
+            <div style={{ position: 'absolute', top: '40%', left: 0, right: 0, textAlign: 'center', color: C.textMute, fontSize: 14 }}>
+              No hay turnos para este día.
             </div>
           )}
-
-          {loadingProf?(
-            <Loading msg="Cargando profesionales..."/>
-          ):Object.keys(grupos).length===0?(
-            <div style={{textAlign:"center",padding:"48px 0",color:DS.textDis,fontSize:14,fontFamily:DS.font}}>
-              {filtroSpec!=="Todas"?`Sin profesionales con especialidad "${filtroSpec}".`:"No hay profesionales registrados."}
-            </div>
-          ):Object.entries(grupos).map(([esp,profs],ci)=>(
-            <ClinicCard key={esp} especialidad={esp} profesionales={profs}
-              disponibilidad={disp} turnoIdx={turnoIdx} allHoras={allHoras}
-              onOcupado={t=>navigate("/turnos/"+t.id)}
-              onDisponible={(prof,slot)=>navigate(`/nuevo-turno?profesional_id=${prof.id}&fecha=${fecha}&hora=${slot.hora}`)}
-              defaultOpen={ci===0}/>
-          ))}
-        </main>
+        </div>
       </div>
-    </>
-  );
+    </div>
+  )
+}
+
+// ─── Vista SEMANA ─────────────────────────────────────────────────────────────
+function WeekView({ turnosByDate, weekStart, onEdit, onDayClick }) {
+  const days = Array.from({ length: 7 }, (_, i) => addD(weekStart, i))
+  return (
+    <div>
+      {/* Cabecera de días */}
+      <div style={{ display: 'grid', gridTemplateColumns: `58px repeat(7,1fr)`, borderBottom: `1px solid ${C.border}` }}>
+        <div style={{ borderRight: `1px solid ${C.border}` }} />
+        {days.map((d, i) => {
+          const ts = turnosByDate[toISO(d)] || []
+          const today = isToday(d)
+          return (
+            <div key={i} className="ag-dc" onClick={() => onDayClick(d)} style={{ padding: '10px 6px', textAlign: 'center', borderRight: i < 6 ? `1px solid ${C.border}` : 'none', background: today ? 'rgba(56,189,248,.06)' : 'transparent', cursor: 'pointer', transition: '.12s' }}>
+              <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: 1, color: C.textMute, textTransform: 'uppercase' }}>{DOW[i]}</div>
+              <div style={{ fontSize: 22, fontWeight: 800, marginTop: 2, lineHeight: 1, color: today ? C.accent : C.text, fontVariantNumeric: 'tabular-nums' }}>{d.getDate()}</div>
+              <div style={{ fontSize: 11, color: C.textDim, marginTop: 5 }}>{ts.length ? `${ts.length} turno${ts.length !== 1 ? 's' : ''}` : '—'}</div>
+            </div>
+          )
+        })}
+      </div>
+      {/* Grid horario */}
+      <div className="ag-scroll" style={{ display: 'grid', gridTemplateColumns: `58px repeat(7,1fr)`, maxHeight: 580, overflowY: 'auto' }}>
+        <Gutter />
+        {days.map((d, i) => {
+          const ts = turnosByDate[toISO(d)] || []
+          return (
+            <div key={i} style={{ position: 'relative', height: TOTAL_H, borderRight: i < 6 ? `1px solid ${C.border}` : 'none', background: isToday(d) ? 'rgba(56,189,248,.015)' : 'transparent' }}>
+              <HLines />
+              {isToday(d) && <NowLine />}
+              {ts.filter(t => t.fecha_inicio).map(t => <EvCard key={t.id} t={t} onEdit={onEdit} compact />)}
+            </div>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
+// ─── Vista MES ────────────────────────────────────────────────────────────────
+function MonthView({ turnosByDate, currentDate, onDayClick }) {
+  const y = currentDate.getFullYear(), m = currentDate.getMonth()
+  const firstDay = new Date(y, m, 1)
+  const gridStart = monday(firstDay)
+  // Calcular celdas necesarias para cubrir el mes completo en semanas de lunes a domingo
+  const lastDay = new Date(y, m + 1, 0)
+  const lastDow = dowIdx(lastDay)
+  const totalCells = dowIdx(firstDay) + lastDay.getDate() + (lastDow < 6 ? 6 - lastDow : 0)
+
+  return (
+    <div>
+      {/* Cabecera días de la semana */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7,1fr)', borderBottom: `1px solid ${C.border}` }}>
+        {DOWL.map((d, i) => (
+          <div key={d} style={{ padding: '10px 12px', fontSize: 11, fontWeight: 700, letterSpacing: 1, color: C.textMute, textTransform: 'uppercase', borderRight: i < 6 ? `1px solid ${C.border}` : 'none' }}>{d}</div>
+        ))}
+      </div>
+      {/* Celdas del mes */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7,1fr)' }}>
+        {Array.from({ length: totalCells }, (_, i) => {
+          const d = addD(gridStart, i)
+          const inMonth = d.getMonth() === m
+          const iso = toISO(d)
+          const ts = turnosByDate[iso]
+          const today = isToday(d)
+          const chips = (ts || []).slice(0, 3)
+          const extra = ts ? Math.max(0, ts.length - 3) : 0
+
+          return (
+            <div key={i} className="ag-mc" onClick={() => onDayClick(d)} style={{ minHeight: 100, padding: 8, borderRight: (i % 7) < 6 ? `1px solid ${C.border}` : 'none', borderBottom: `1px solid ${C.border}`, opacity: inMonth ? 1 : .3, background: today ? 'rgba(56,189,248,.05)' : 'transparent', cursor: 'pointer', transition: '.12s', display: 'flex', flexDirection: 'column', gap: 3 }}>
+              {/* Número del día */}
+              {today ? (
+                <div style={{ width: 24, height: 24, borderRadius: '50%', background: `linear-gradient(150deg,${C.accent},${C.accent2})`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 800, color: '#04263f', fontVariantNumeric: 'tabular-nums' }}>{d.getDate()}</div>
+              ) : (
+                <div style={{ fontSize: 13, fontWeight: 700, color: C.textDim, fontVariantNumeric: 'tabular-nums' }}>{d.getDate()}</div>
+              )}
+              {/* Loading hint */}
+              {ts === undefined && inMonth && <div style={{ fontSize: 10, color: C.textMute }}>···</div>}
+              {/* Event chips */}
+              {chips.map((t, ci) => {
+                const c = stCfg(t.estado)
+                return (
+                  <div key={ci} style={{ fontSize: 10, fontWeight: 600, padding: '2px 5px', borderRadius: 4, background: c.bg, borderLeft: `2px solid ${c.color}`, color: C.text, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                    {fmtH(t.fecha_inicio)} {t.cliente?.nombre || '—'}
+                  </div>
+                )
+              })}
+              {extra > 0 && <div style={{ fontSize: 10, color: C.textMute, fontWeight: 700 }}>+{extra} más</div>}
+            </div>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
+// ─── AGENDA — componente principal ───────────────────────────────────────────
+export default function Agenda() {
+  const navigate  = useNavigate()
+  const { logout, negocio } = useAuth()
+
+  const [view,         setView]         = useState('week')
+  const [currentDate,  setCurrentDate]  = useState(new Date())
+  const [turnosByDate, setTurnosByDate] = useState({})
+  const [loading,      setLoading]      = useState(true)
+  const [error,        setError]        = useState('')
+
+  // ── Fetch: carga las fechas necesarias según la vista ─────────────────────
+  useEffect(() => {
+    let cancelled = false
+
+    const load = async (dates) => {
+      setLoading(true)
+      setError('')
+      try {
+        const results = await Promise.all(
+          dates.map(d =>
+            api.get('/turnos', { params: { fecha: d } })
+              .then(r => [d, r.data || []])
+              .catch(() => [d, []])  // un día fallido no corta todo
+          )
+        )
+        if (!cancelled) {
+          setTurnosByDate(prev => ({ ...prev, ...Object.fromEntries(results) }))
+        }
+      } catch (e) {
+        if (!cancelled) setError(e.response?.data?.detail || e.message || 'Error al cargar turnos.')
+      } finally {
+        if (!cancelled) setLoading(false)
+      }
+    }
+
+    const iso = toISO(currentDate)
+    if (view === 'day') {
+      load([iso])
+    } else if (view === 'week') {
+      const mon = monday(currentDate)
+      load(Array.from({ length: 7 }, (_, i) => toISO(addD(mon, i))))
+    } else {
+      const y = currentDate.getFullYear(), m = currentDate.getMonth()
+      const days = new Date(y, m + 1, 0).getDate()
+      load(Array.from({ length: days }, (_, i) => toISO(new Date(y, m, i + 1))))
+    }
+
+    return () => { cancelled = true }
+  }, [view, currentDate.getFullYear(), currentDate.getMonth(), currentDate.getDate()])
+
+  // ── Navegación de fechas ───────────────────────────────────────────────────
+  const shift = dir => setCurrentDate(prev => {
+    if (view === 'day')   return addD(prev, dir)
+    if (view === 'week')  return addD(prev, dir * 7)
+    return new Date(prev.getFullYear(), prev.getMonth() + dir, 1)
+  })
+
+  const onDayClick  = d => { setCurrentDate(d); setView('day') }
+  const onEventEdit = t => navigate(`/turnos/${t.id}`)
+  const onLogout    = () => { logout(); navigate('/login') }
+
+  // ── Etiqueta del rango según vista ────────────────────────────────────────
+  const rangeLabel = () => {
+    if (view === 'day') return `${DOWL[dowIdx(currentDate)]} ${currentDate.getDate()}, ${MES[currentDate.getMonth()]}`
+    if (view === 'week') {
+      const mon = monday(currentDate), sun = addD(mon, 6)
+      return mon.getMonth() === sun.getMonth()
+        ? `${mon.getDate()} – ${sun.getDate()} ${MES[mon.getMonth()]}`
+        : `${mon.getDate()} ${MES[mon.getMonth()].slice(0,3)} – ${sun.getDate()} ${MES[sun.getMonth()].slice(0,3)}`
+    }
+    return MES[currentDate.getMonth()]
+  }
+
+  // KPIs: siempre muestran el día seleccionado (o hoy si hay datos)
+  const kpiTurnos = turnosByDate[toISO(currentDate)] || []
+  const todayKey  = toISO(new Date())
+  const todayCount = turnosByDate[todayKey]?.length
+
+  return (
+    <div style={{ minHeight: '100vh', background: `radial-gradient(1100px 500px at 50% -5%, ${C.bgGlow} 0%, transparent 60%), ${C.bg}`, color: C.text, fontFamily: "'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif", WebkitFontSmoothing: 'antialiased', boxSizing: 'border-box' }}>
+
+      <TopNav negocio={negocio} onNav={navigate} onLogout={onLogout} />
+
+      <div style={{ maxWidth: 1380, margin: '0 auto', padding: '28px 28px 60px' }}>
+
+        {/* Encabezado de página */}
+        <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 20, marginBottom: 22 }}>
+          <div>
+            <h1 style={{ margin: 0, fontSize: 26, fontWeight: 800, letterSpacing: -.5, color: C.text }}>Agenda</h1>
+            <div style={{ color: C.textDim, fontSize: 13.5, marginTop: 5 }}>
+              {new Date().toLocaleDateString('es-AR', { weekday: 'long', day: 'numeric', month: 'long' })}
+              {todayCount !== undefined && <> · <b style={{ color: C.text }}>{todayCount} turno{todayCount !== 1 ? 's' : ''}</b> programados hoy</>}
+            </div>
+          </div>
+          <button onClick={() => navigate('/nuevo-turno')} style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '10px 18px', borderRadius: 11, fontWeight: 700, fontSize: 14, background: `linear-gradient(150deg,${C.accent},${C.accent2})`, color: '#04263f', border: 'none', cursor: 'pointer', boxShadow: `0 6px 18px rgba(43,130,246,.35)`, whiteSpace: 'nowrap', transition: '.15s' }}>
+            <svg width={15} height={15} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round"><path d="M12 5v14M5 12h14" /></svg>
+            Nuevo turno
+          </button>
+        </div>
+
+        {/* KPIs */}
+        <KPIs turnos={kpiTurnos} />
+
+        {/* Error */}
+        {error && <div style={{ background: 'rgba(248,113,113,.1)', color: C.can, border: `1px solid ${C.canBd}`, borderRadius: 10, padding: '10px 14px', marginBottom: 16, fontSize: 13 }}>{error}</div>}
+
+        {/* Toolbar: fecha + segmented */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap', marginBottom: 14 }}>
+          {/* Navegación de fecha */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <div style={{ display: 'flex', gap: 4 }}>
+              <button className="ag-gb" onClick={() => shift(-1)} style={{ width: 36, height: 36, borderRadius: 9, display: 'flex', alignItems: 'center', justifyContent: 'center', color: C.textDim, background: C.panel, border: `1px solid ${C.border}`, cursor: 'pointer', transition: '.15s' }}>
+                <svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"><path d="m15 6-6 6 6 6" /></svg>
+              </button>
+              <button className="ag-gb" onClick={() => setCurrentDate(new Date())} style={{ padding: '0 14px', height: 36, borderRadius: 9, fontWeight: 600, fontSize: 13, color: C.textDim, background: C.panel, border: `1px solid ${C.border}`, cursor: 'pointer', transition: '.15s' }}>Hoy</button>
+              <button className="ag-gb" onClick={() => shift(1)}  style={{ width: 36, height: 36, borderRadius: 9, display: 'flex', alignItems: 'center', justifyContent: 'center', color: C.textDim, background: C.panel, border: `1px solid ${C.border}`, cursor: 'pointer', transition: '.15s' }}>
+                <svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"><path d="m9 6 6 6-6 6" /></svg>
+              </button>
+            </div>
+            <div>
+              <div style={{ fontSize: 18, fontWeight: 800, letterSpacing: -.3, lineHeight: 1.15, color: C.text }}>{rangeLabel()}</div>
+              <div style={{ fontSize: 11, color: C.textMute }}>{currentDate.getFullYear()}</div>
+            </div>
+          </div>
+          <div style={{ flex: 1 }} />
+          {/* Segmented control Día / Semana / Mes */}
+          <div style={{ display: 'flex', background: C.panel, borderRadius: 11, padding: 4, boxShadow: `inset 0 0 0 1px ${C.border}` }}>
+            {[['day', 'Día'], ['week', 'Semana'], ['month', 'Mes']].map(([v, l]) => (
+              <button key={v} onClick={() => setView(v)} style={{ padding: '7px 16px', borderRadius: 8, fontWeight: 700, fontSize: 13, color: view === v ? '#04263f' : C.textDim, background: view === v ? `linear-gradient(150deg,${C.accent},${C.accent2})` : 'transparent', boxShadow: view === v ? `0 3px 10px rgba(43,130,246,.3)` : 'none', border: 'none', cursor: 'pointer', transition: '.15s' }}>{l}</button>
+            ))}
+          </div>
+        </div>
+
+        {/* Calendario */}
+        <div style={{ borderRadius: 14, background: C.panel, boxShadow: `inset 0 0 0 1px ${C.border}`, overflow: 'hidden', position: 'relative' }}>
+          {/* Overlay de carga — no bloquea el layout */}
+          {loading && (
+            <div style={{ position: 'absolute', inset: 0, background: 'rgba(7,10,18,.55)', zIndex: 20, display: 'flex', alignItems: 'center', justifyContent: 'center', backdropFilter: 'blur(2px)' }}>
+              <Spinner />
+            </div>
+          )}
+          {view === 'day'   && <DayView   turnos={turnosByDate[toISO(currentDate)] || []} date={currentDate} onEdit={onEventEdit} />}
+          {view === 'week'  && <WeekView  turnosByDate={turnosByDate} weekStart={monday(currentDate)} onEdit={onEventEdit} onDayClick={onDayClick} />}
+          {view === 'month' && <MonthView turnosByDate={turnosByDate} currentDate={currentDate} onDayClick={onDayClick} />}
+        </div>
+
+        {/* Leyenda */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 18, flexWrap: 'wrap', marginTop: 14, color: C.textDim, fontSize: 12.5 }}>
+          {Object.entries(STATUS).map(([k, v]) => (
+            <div key={k} style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
+              <span style={{ width: 10, height: 10, borderRadius: 3, background: v.bg, border: `1px solid ${v.bd}`, display: 'inline-block' }} />
+              {v.label}
+            </div>
+          ))}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
+            <span style={{ width: 10, height: 10, borderRadius: 3, background: C.aiBg, border: `1px dashed ${C.aiBd}`, display: 'inline-block' }} />
+            Hueco libre detectado
+          </div>
+        </div>
+
+      </div>
+    </div>
+  )
 }
