@@ -3,68 +3,53 @@ import { useNavigate } from "react-router-dom";
 import api from "../services/api";
 import { useAuth } from "../context/AuthContext";
 
-// ─── Temas ────────────────────────────────────────────────────────────────────
-const THEMES = {
-  light: {
-    bg:"#f5f6fa", surface:"#ffffff", surfaceAlt:"#f8f9fc",
-    border:"#e8eaf0", borderL:"#f0f1f6",
-    primary:"#4f46e5", primaryL:"#ede9fe", primaryD:"#3730a3",
-    text:"#1e1b3a", muted:"#7c7a99", light:"#b0aec8",
-    danger:"#ef4444", dangerL:"#fef2f2",
-    success:"#10b981", warn:"#f59e0b",
-    navShadow:"0 1px 4px rgba(79,70,229,.07)",
-    cardShadow:"0 2px 16px rgba(79,70,229,.08)",
-    slotOcupado:   { bg:"#4f46e5", fg:"#ffffff", border:"#3730a3" },
-    slotDisp:      { bg:"#f0fdf4", fg:"#166534", border:"#86efac" },
-    slotLibre:     { bg:"#f8f9fc", fg:"#b0aec8", border:"#f0f1f6" },
-    rowAlt:"#fafafe", theadBg:"#f8f9fc", legendBg:"#fafafe",
-    toggleTrack:"#e2e0f8", inputScheme:"light",
-  },
-  dark: {
-    bg:"#0e0e1c", surface:"#181830", surfaceAlt:"#12122a",
-    border:"#2a2a4a", borderL:"#20203a",
-    primary:"#818cf8", primaryL:"#1e1b4b", primaryD:"#6366f1",
-    text:"#e2e4f0", muted:"#8b8fad", light:"#3d3f60",
-    danger:"#f87171", dangerL:"#2d1515",
-    success:"#34d399", warn:"#fbbf24",
-    navShadow:"0 1px 8px rgba(0,0,0,.5)",
-    cardShadow:"0 4px 28px rgba(0,0,0,.45)",
-    slotOcupado:   { bg:"#3730a3", fg:"#c7d2fe", border:"#4338ca" },
-    slotDisp:      { bg:"#064e3b", fg:"#6ee7b7", border:"#065f46" },
-    slotLibre:     { bg:"#181830", fg:"#2d2f50", border:"#2a2a4a" },
-    rowAlt:"#141428", theadBg:"#141428", legendBg:"#141428",
-    toggleTrack:"#3730a3", inputScheme:"dark",
-  },
+// ─── Design System ────────────────────────────────────────────────────────────
+const DS = {
+  pageBg:       "#050510",
+  cardBg:       "rgba(15,23,42,0.95)",
+  inputBg:      "#1e293b",
+  hoverBg:      "#0f172a",
+  blue:         "#2563eb",
+  cyan:         "#06b6d4",
+  gradient:     "linear-gradient(135deg,#2563eb,#06b6d4)",
+  text:         "#ffffff",
+  textSec:      "#94a3b8",
+  textDis:      "#64748b",
+  border:       "#334155",
+  borderCard:   "#1e293b",
+  borderFocus:  "#2563eb",
+  errorBg:      "rgba(220,38,38,0.15)",
+  errorBorder:  "rgba(220,38,38,0.30)",
+  errorText:    "#fca5a5",
+  font:         "'Space Grotesk',sans-serif",
 };
 
 const SPEC_COLORS = {
-  light:{
-    "Clínica":["#ede9fe","#6d28d9"], "Kinesiología":["#d1fae5","#065f46"],
-    "Nutrición":["#fef9c3","#92400e"], "Odontología":["#fee2e2","#991b1b"],
-    "Psicología":["#e0f2fe","#075985"], "Cardiología":["#fce7f3","#9d174d"],
-  },
-  dark:{
-    "Clínica":["#2e1b6e","#c4b5fd"], "Kinesiología":["#064e3b","#6ee7b7"],
-    "Nutrición":["#3b2200","#fcd34d"], "Odontología":["#450a0a","#fca5a5"],
-    "Psicología":["#0c2844","#7dd3fc"], "Cardiología":["#3b0a2a","#f9a8d4"],
-  },
+  "Clínica":      ["rgba(37,99,235,0.18)","#60a5fa"],
+  "Kinesiología": ["rgba(6,182,212,0.18)","#67e8f9"],
+  "Nutrición":    ["rgba(245,158,11,0.18)","#fcd34d"],
+  "Odontología":  ["rgba(239,68,68,0.18)","#fca5a5"],
+  "Psicología":   ["rgba(139,92,246,0.18)","#c4b5fd"],
+  "Cardiología":  ["rgba(236,72,153,0.18)","#f9a8d4"],
 };
-
-// Colores de cabecera por clínica/especialidad
 const CLINIC_ACCENT = {
-  "Clínica":     ["#4f46e5","#6366f1"],
-  "Kinesiología":["#059669","#10b981"],
-  "Nutrición":   ["#d97706","#f59e0b"],
-  "Odontología": ["#dc2626","#ef4444"],
-  "Psicología":  ["#0284c7","#0ea5e9"],
-  "Cardiología": ["#be185d","#ec4899"],
-  "General":     ["#7c3aed","#a78bfa"],
+  "Clínica":      ["#2563eb","#3b82f6"],
+  "Kinesiología": ["#0891b2","#06b6d4"],
+  "Nutrición":    ["#d97706","#f59e0b"],
+  "Odontología":  ["#dc2626","#ef4444"],
+  "Psicología":   ["#7c3aed","#8b5cf6"],
+  "Cardiología":  ["#be185d","#ec4899"],
+  "General":      ["#2563eb","#06b6d4"],
 };
-
-const AVATAR_COLORS = [
-  ["#a78bfa","#6d28d9"],["#67e8f9","#0e7490"],
-  ["#fca5a5","#b91c1c"],["#86efac","#166534"],
-  ["#fdba74","#92400e"],["#c4b5fd","#4c1d95"],
+const SLOT_S = {
+  ocupado:    { bg:"rgba(37,99,235,0.25)", fg:"#93c5fd", border:"rgba(37,99,235,0.5)"  },
+  disponible: { bg:"rgba(6,182,212,0.15)", fg:"#67e8f9", border:"rgba(6,182,212,0.4)" },
+  libre:      { bg:"rgba(15,23,42,0.4)",   fg:"#334155", border:"#1e293b"              },
+};
+const AVATAR_G = [
+  ["#6366f1","#2563eb"],["#06b6d4","#0284c7"],
+  ["#8b5cf6","#6d28d9"],["#10b981","#059669"],
+  ["#f59e0b","#d97706"],["#ec4899","#be185d"],
 ];
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -72,9 +57,7 @@ function hoyISO() { return new Date().toISOString().split("T")[0]; }
 function formatTitulo(iso) {
   if (!iso) return "";
   const [y,m,d] = iso.split("-");
-  return new Date(+y,+m-1,+d).toLocaleDateString("es-AR",{
-    weekday:"long",day:"numeric",month:"long",year:"numeric"
-  });
+  return new Date(+y,+m-1,+d).toLocaleDateString("es-AR",{weekday:"long",day:"numeric",month:"long",year:"numeric"});
 }
 function formatHora(str) {
   if (!str) return "—";
@@ -86,166 +69,159 @@ function useHover() {
   return [h,{onMouseEnter:()=>set(true),onMouseLeave:()=>set(false)}];
 }
 function useTheme() {
-  const [mode,setMode]=useState(()=>{
-    try{return localStorage.getItem("turnoIA_theme")||"light";}catch{return "light";}
-  });
-  const toggle=()=>setMode(m=>{
-    const n=m==="light"?"dark":"light";
-    try{localStorage.setItem("turnoIA_theme",n);}catch{}
-    return n;
-  });
+  const [mode,setMode]=useState(()=>{try{return localStorage.getItem("turnoIA_theme")||"dark";}catch{return "dark";}});
+  const toggle=()=>setMode(m=>{const n=m==="light"?"dark":"light";try{localStorage.setItem("turnoIA_theme",n);}catch{}return n;});
   return [mode,toggle];
 }
 
-// ─── ThemeToggle ──────────────────────────────────────────────────────────────
-function ThemeToggle({mode,onToggle,T}){
-  const [hov,hp]=useHover();
-  const dark=mode==="dark";
-  return(
-    <button onClick={onToggle} {...hp}
-      title={dark?"Cambiar a modo claro":"Cambiar a modo oscuro"}
-      style={{
-        display:"flex",alignItems:"center",gap:8,
-        padding:"5px 12px",borderRadius:99,cursor:"pointer",
-        border:`1.5px solid ${hov?T.primary:T.border}`,
-        background:hov?T.primaryL:T.surface,
-        color:hov?T.primary:T.muted,
-        fontSize:12,fontWeight:700,fontFamily:"'Segoe UI',sans-serif",
-        transition:"all .2s",whiteSpace:"nowrap",
-      }}>
-      <span style={{
-        position:"relative",width:34,height:18,borderRadius:99,
-        background:dark?T.toggleTrack:T.border,
-        display:"inline-block",flexShrink:0,transition:"background .2s",
-      }}>
-        <span style={{
-          position:"absolute",left:dark?18:2,top:2,
-          width:14,height:14,borderRadius:"50%",
-          background:"#fff",boxShadow:"0 1px 3px rgba(0,0,0,.25)",
-          transition:"left .2s",display:"flex",alignItems:"center",
-          justifyContent:"center",fontSize:8,
-        }}>{dark?"🌙":"☀️"}</span>
-      </span>
-      <span>{dark?"Oscuro":"Claro"}</span>
-    </button>
-  );
+// ─── Starfield (canvas animado) ───────────────────────────────────────────────
+import { useRef } from "react";
+function Starfield() {
+  const ref = useRef(null);
+  useEffect(()=>{
+    const c=ref.current; if(!c)return;
+    const ctx=c.getContext("2d");
+    c.width=window.innerWidth; c.height=window.innerHeight;
+    const stars=Array.from({length:120},()=>({
+      x:Math.random()*c.width,y:Math.random()*c.height,
+      r:Math.random()*1.4+0.4,o:Math.random()*0.5+0.3,
+      s:Math.random()*0.4+0.1,
+    }));
+    let frame;
+    const draw=()=>{
+      ctx.clearRect(0,0,c.width,c.height);
+      stars.forEach(s=>{
+        ctx.beginPath(); ctx.arc(s.x,s.y,s.r,0,Math.PI*2);
+        ctx.fillStyle=`rgba(255,255,255,${s.o})`; ctx.fill();
+        s.o+=s.s*0.007; if(s.o>0.9||s.o<0.3)s.s*=-1;
+      });
+      frame=requestAnimationFrame(draw);
+    };
+    draw();
+    const resize=()=>{c.width=window.innerWidth;c.height=window.innerHeight;};
+    window.addEventListener("resize",resize);
+    return ()=>{cancelAnimationFrame(frame);window.removeEventListener("resize",resize);};
+  },[]);
+  return <canvas ref={ref} style={{position:"fixed",inset:0,zIndex:0,pointerEvents:"none"}}/>;
 }
 
 // ─── NavBar ───────────────────────────────────────────────────────────────────
-function NavLink({children,onClick,active,danger,T}){
-  const [hov,hp]=useHover();
-  return(
-    <button onClick={onClick} {...hp} style={{
-      padding:"5px 13px",borderRadius:7,border:"none",cursor:"pointer",
-      fontSize:13,fontWeight:active?700:500,fontFamily:"'Segoe UI',sans-serif",
-      background:danger?(hov?T.dangerL:"transparent"):active?T.primaryL:hov?T.primaryL+"55":"transparent",
-      color:danger?T.danger:active?T.primary:T.muted,transition:"all .15s",
-    }}>{children}</button>
-  );
-}
-function NavBar({navigate,onLogout,mode,onToggle,T}){
-  return(
+function NavBar({navigate,onLogout,mode,onToggle}) {
+  return (
     <nav style={{
       position:"sticky",top:0,zIndex:200,height:60,
       display:"flex",alignItems:"center",justifyContent:"space-between",
-      padding:"0 32px",background:T.surface,borderBottom:`1px solid ${T.border}`,
-      boxShadow:T.navShadow,fontFamily:"'Segoe UI',sans-serif",
-      transition:"background .3s,border-color .3s",
+      padding:"0 28px",
+      background:"rgba(5,5,16,0.85)",
+      borderBottom:`1px solid ${DS.borderCard}`,
+      backdropFilter:"blur(20px)",
+      boxShadow:"0 1px 0 rgba(37,99,235,0.15)",
+      fontFamily:DS.font,
     }}>
       <div style={{display:"flex",alignItems:"center",gap:10}}>
         <div style={{
-          width:32,height:32,borderRadius:8,display:"flex",
-          alignItems:"center",justifyContent:"center",
-          background:`linear-gradient(135deg,${T.primary},${T.primaryD})`,
-          color:"#fff",fontWeight:800,fontSize:15,
-        }}>T</div>
-        <span style={{fontWeight:800,fontSize:17,color:T.text,letterSpacing:"-.02em"}}>TurnoIA</span>
+          width:32,height:32,borderRadius:8,
+          background:DS.gradient,
+          display:"flex",alignItems:"center",justifyContent:"center",
+          fontSize:16, boxShadow:"0 0 12px rgba(37,99,235,0.4)",
+        }}>⚙️</div>
+        <div>
+          <span style={{fontWeight:700,fontSize:16,color:DS.text,letterSpacing:1}}>TurnoIA</span>
+          <span style={{fontSize:9,textTransform:"uppercase",letterSpacing:3,color:DS.textSec,marginLeft:8}}>
+            Gestión de turnos
+          </span>
+        </div>
       </div>
       <div style={{display:"flex",alignItems:"center",gap:4}}>
-        <NavLink active onClick={()=>navigate("/agenda")} T={T}>📅 Agenda</NavLink>
-        <NavLink onClick={()=>navigate("/profesionales")} T={T}>👤 Profesionales</NavLink>
-        <NavLink onClick={()=>navigate("/clientes")} T={T}>🧑‍🤝‍🧑 Clientes</NavLink>
-        <div style={{width:1,height:24,background:T.border,margin:"0 8px"}}/>
-        <ThemeToggle mode={mode} onToggle={onToggle} T={T}/>
-        <div style={{width:1,height:24,background:T.border,margin:"0 4px 0 8px"}}/>
-        <NavLink danger onClick={onLogout} T={T}>Cerrar sesión</NavLink>
+        <NavLnk active onClick={()=>navigate("/agenda")}>📅 Agenda</NavLnk>
+        <NavLnk onClick={()=>navigate("/profesionales")}>👤 Profesionales</NavLnk>
+        <NavLnk onClick={()=>navigate("/clientes")}>🧑‍🤝‍🧑 Clientes</NavLnk>
+        <div style={{width:1,height:22,background:DS.border,margin:"0 8px"}}/>
+        <button onClick={onLogout} style={{
+          padding:"4px 12px",borderRadius:7,border:`1px solid rgba(220,38,38,0.3)`,
+          background:"transparent",color:DS.errorText,fontSize:12,fontWeight:600,
+          cursor:"pointer",fontFamily:DS.font,transition:"all .15s",
+        }}>Salir</button>
       </div>
     </nav>
   );
 }
-
-// ─── DateNav ──────────────────────────────────────────────────────────────────
-function DateNav({fecha,onChange,T}){
-  const shift=days=>{
-    const d=new Date(fecha+"T12:00");d.setDate(d.getDate()+days);
-    onChange(d.toISOString().split("T")[0]);
-  };
-  const [h1,h1p]=useHover();const [h2,h2p]=useHover();
-  const ArBtn=({hov,hp,onClick:oc,ch})=>(
-    <button onClick={oc} {...hp} style={{
-      width:28,height:28,border:"none",borderRadius:6,cursor:"pointer",
-      background:hov?T.primaryL:"transparent",color:hov?T.primary:T.muted,
-      fontSize:16,display:"flex",alignItems:"center",justifyContent:"center",
-      fontFamily:"'Segoe UI',sans-serif",transition:"all .12s",
-    }}>{ch}</button>
-  );
-  return(
-    <div style={{
-      display:"flex",alignItems:"center",gap:4,
-      background:T.surface,border:`1px solid ${T.border}`,
-      borderRadius:10,padding:4,boxShadow:"0 1px 4px rgba(0,0,0,.06)",
-      transition:"background .3s,border-color .3s",
-    }}>
-      <ArBtn hov={h1} hp={h1p} onClick={()=>shift(-1)} ch="‹"/>
-      <input type="date" value={fecha} onChange={e=>onChange(e.target.value)}
-        style={{
-          border:"none",background:"transparent",outline:"none",cursor:"pointer",
-          fontSize:13,fontWeight:600,color:T.text,
-          fontFamily:"'Segoe UI',sans-serif",padding:"0 4px",
-          colorScheme:T.inputScheme,
-        }}/>
-      <ArBtn hov={h2} hp={h2p} onClick={()=>shift(1)} ch="›"/>
-      {fecha!==hoyISO()&&(
-        <button onClick={()=>onChange(hoyISO())} style={{
-          border:`1px solid ${T.border}`,background:"transparent",borderRadius:6,
-          fontSize:11,fontWeight:700,color:T.primary,cursor:"pointer",
-          padding:"2px 8px",fontFamily:"'Segoe UI',sans-serif",
-        }}>Hoy</button>
-      )}
-    </div>
-  );
-}
-
-function PrimaryBtn({children,onClick,T}){
+function NavLnk({children,onClick,active}){
   const [hov,hp]=useHover();
   return(
     <button onClick={onClick} {...hp} style={{
-      padding:"8px 18px",background:hov?T.primaryD:T.primary,
-      color:"#fff",border:"none",borderRadius:9,fontWeight:700,fontSize:13,
-      cursor:"pointer",fontFamily:"'Segoe UI',sans-serif",
-      boxShadow:hov?"0 4px 14px rgba(99,102,241,.4)":"none",
-      transform:hov?"translateY(-1px)":"none",transition:"all .15s",whiteSpace:"nowrap",
+      padding:"4px 12px",borderRadius:7,border:"none",cursor:"pointer",
+      fontSize:12,fontWeight:active?700:500,fontFamily:DS.font,
+      background:active?"rgba(37,99,235,0.2)":hov?"rgba(255,255,255,0.05)":"transparent",
+      color:active?DS.cyan:hov?DS.textSec:DS.textDis,
+      transition:"all .15s",
     }}>{children}</button>
   );
 }
 
-// ─── SpecFilter ───────────────────────────────────────────────────────────────
-function SpecFilter({specs,value,onChange,tmode,T}){
-  const sc=SPEC_COLORS[tmode];
+// ─── DateNav ──────────────────────────────────────────────────────────────────
+function DateNav({fecha,onChange}){
+  const shift=d=>{const dt=new Date(fecha+"T12:00");dt.setDate(dt.getDate()+d);onChange(dt.toISOString().split("T")[0]);};
+  return(
+    <div style={{display:"flex",alignItems:"center",gap:3,background:DS.inputBg,border:`1px solid ${DS.border}`,borderRadius:9,padding:3}}>
+      <ArrBtn onClick={()=>shift(-1)}>‹</ArrBtn>
+      <input type="date" value={fecha} onChange={e=>onChange(e.target.value)} style={{
+        border:"none",background:"transparent",outline:"none",cursor:"pointer",
+        fontSize:13,fontWeight:600,color:DS.text,fontFamily:DS.font,
+        padding:"0 4px",colorScheme:"dark",
+      }}/>
+      <ArrBtn onClick={()=>shift(1)}>›</ArrBtn>
+      {fecha!==hoyISO()&&<button onClick={()=>onChange(hoyISO())} style={{
+        border:`1px solid ${DS.border}`,background:"transparent",borderRadius:6,
+        fontSize:11,fontWeight:700,color:DS.cyan,cursor:"pointer",
+        padding:"2px 7px",fontFamily:DS.font,
+      }}>Hoy</button>}
+    </div>
+  );
+}
+function ArrBtn({children,onClick}){
+  const [hov,hp]=useHover();
+  return(
+    <button onClick={onClick} {...hp} style={{
+      width:26,height:26,border:"none",borderRadius:5,cursor:"pointer",
+      background:hov?"rgba(37,99,235,0.25)":"transparent",
+      color:hov?DS.cyan:DS.textDis,
+      fontSize:15,display:"flex",alignItems:"center",justifyContent:"center",
+      fontFamily:DS.font,transition:"all .12s",
+    }}>{children}</button>
+  );
+}
+function PrimaryBtn({children,onClick}){
+  const [hov,hp]=useHover();
+  return(
+    <button onClick={onClick} {...hp} style={{
+      padding:"7px 16px",background:DS.gradient,color:"#fff",
+      border:"none",borderRadius:8,fontWeight:700,fontSize:13,
+      cursor:"pointer",fontFamily:DS.font,
+      filter:hov?"brightness(1.15)":"none",
+      transform:hov?"translateY(-1px)":"none",
+      boxShadow:hov?"0 4px 16px rgba(37,99,235,0.4)":"none",
+      transition:"all .15s",whiteSpace:"nowrap",
+    }}>{children}</button>
+  );
+}
+
+// ─── Filtro especialidad ──────────────────────────────────────────────────────
+function SpecFilter({specs,value,onChange}){
   return(
     <div style={{display:"flex",alignItems:"center",gap:6,flexWrap:"wrap"}}>
-      <span style={{fontSize:12,fontWeight:600,color:T.muted,whiteSpace:"nowrap"}}>🔬 Especialidad:</span>
+      <span style={{fontSize:11,fontWeight:500,color:DS.textSec,textTransform:"uppercase",letterSpacing:1}}>🔬 Especialidad:</span>
       {["Todas",...specs].map(sp=>{
         const active=value===sp;
-        const [bg,fg]=sc[sp]||[T.primaryL,T.primary];
+        const [bg,fg]=SPEC_COLORS[sp]||["rgba(37,99,235,0.18)","#60a5fa"];
         const [hov,hp]=useHover();
         return(
           <button key={sp} onClick={()=>onChange(sp)} {...hp} style={{
-            padding:"4px 13px",borderRadius:99,cursor:"pointer",
-            fontSize:12,fontWeight:active?700:500,fontFamily:"'Segoe UI',sans-serif",
-            border:`1.5px solid ${active?fg:T.border}`,
-            background:active?bg:hov?T.primaryL+"33":T.surface,
-            color:active?fg:T.muted,transition:"all .12s",
+            padding:"3px 12px",borderRadius:99,cursor:"pointer",
+            fontSize:11,fontWeight:active?700:500,fontFamily:DS.font,
+            border:`1px solid ${active?fg:"rgba(255,255,255,0.1)"}`,
+            background:active?bg:hov?"rgba(255,255,255,0.05)":"transparent",
+            color:active?fg:DS.textDis,transition:"all .12s",
           }}>{sp}</button>
         );
       })}
@@ -254,21 +230,18 @@ function SpecFilter({specs,value,onChange,tmode,T}){
 }
 
 // ─── StatCard ─────────────────────────────────────────────────────────────────
-function StatCard({icon,label,value,color,T}){
+function StatCard({icon,label,value,color}){
   return(
     <div style={{
       display:"flex",alignItems:"center",gap:10,
-      background:T.surface,border:`1px solid ${T.border}`,
-      borderRadius:10,padding:"10px 16px",minWidth:130,
-      boxShadow:"0 1px 4px rgba(0,0,0,.05)",
-      transition:"background .3s,border-color .3s",
+      background:DS.cardBg,border:`1px solid ${DS.borderCard}`,
+      borderRadius:10,padding:"9px 14px",minWidth:120,
+      backdropFilter:"blur(12px)",
     }}>
-      <div style={{width:34,height:34,borderRadius:8,display:"flex",
-                   alignItems:"center",justifyContent:"center",
-                   fontSize:16,background:color+"33"}}>{icon}</div>
+      <div style={{width:32,height:32,borderRadius:7,display:"flex",alignItems:"center",justifyContent:"center",fontSize:14,background:color+"33"}}>{icon}</div>
       <div>
-        <div style={{fontSize:20,fontWeight:800,color:T.text,lineHeight:1}}>{value}</div>
-        <div style={{fontSize:11,color:T.muted,marginTop:2,fontWeight:500}}>{label}</div>
+        <div style={{fontSize:18,fontWeight:700,color:DS.text,lineHeight:1,fontFamily:DS.font}}>{value}</div>
+        <div style={{fontSize:10,color:DS.textSec,marginTop:2,textTransform:"uppercase",letterSpacing:1}}>{label}</div>
       </div>
     </div>
   );
@@ -276,54 +249,54 @@ function StatCard({icon,label,value,color,T}){
 
 // ─── Avatar ───────────────────────────────────────────────────────────────────
 function Avatar({nombre,idx,size=28}){
-  const [c1,c2]=AVATAR_COLORS[idx%AVATAR_COLORS.length];
+  const [c1,c2]=AVATAR_G[idx%AVATAR_G.length];
   return(
     <div style={{
       width:size,height:size,borderRadius:"50%",flexShrink:0,
       background:`linear-gradient(135deg,${c1},${c2})`,
       display:"flex",alignItems:"center",justifyContent:"center",
-      color:"#fff",fontSize:size*.38,fontWeight:700,
+      color:"#fff",fontSize:size*.38,fontWeight:700,fontFamily:DS.font,
+      boxShadow:`0 0 8px ${c1}66`,
     }}>{(nombre||"?").charAt(0).toUpperCase()}</div>
   );
 }
 
-// ─── Slot cell ────────────────────────────────────────────────────────────────
-function SlotCell({slot,turno,onOcupado,onDisponible,T}){
+// ─── Badge especialidad ───────────────────────────────────────────────────────
+function SpecBadge({especialidad}){
+  if(!especialidad)return null;
+  const [bg,fg]=SPEC_COLORS[especialidad]||["rgba(37,99,235,0.18)","#60a5fa"];
+  return(
+    <span style={{padding:"2px 8px",borderRadius:99,fontSize:9,fontWeight:700,background:bg,color:fg,
+                  textTransform:"uppercase",letterSpacing:1,fontFamily:DS.font,whiteSpace:"nowrap"}}>
+      {especialidad}
+    </span>
+  );
+}
+
+// ─── Slot ─────────────────────────────────────────────────────────────────────
+function SlotCell({slot,turno,onOcupado,onDisponible}){
   const [hov,hp]=useHover();
   const estado=!slot?"libre":slot.disponible?"disponible":"ocupado";
-  const cfg={ocupado:T.slotOcupado,disponible:T.slotDisp,libre:T.slotLibre}[estado];
+  const cfg=SLOT_S[estado];
   const click=estado!=="libre";
-  const handle=()=>{
-    if(estado==="ocupado"&&turno)onOcupado(turno);
-    else if(estado==="disponible")onDisponible(slot);
-  };
+  const handle=()=>{ if(estado==="ocupado"&&turno)onOcupado(turno); else if(estado==="disponible")onDisponible(slot); };
   return(
     <div {...(click?{...hp,onClick:handle}:{})}
-      title={
-        estado==="ocupado"&&turno
-          ?`${turno.cliente?.nombre} · ${formatHora(turno.fecha_inicio)}–${formatHora(turno.fecha_fin)}`
-          :estado==="disponible"?"Disponible — clic para agendar":""
-      }
       style={{
         flex:1,minWidth:0,margin:"1px 3px",borderRadius:5,
-        border:`1px solid ${cfg.border}`,
-        background:hov&&click?cfg.bg+"cc":cfg.bg,
+        border:`1px solid ${cfg.border}`,background:hov&&click?cfg.bg+"cc":cfg.bg,
         color:cfg.fg,cursor:click?"pointer":"default",
-        display:"flex",flexDirection:"column",justifyContent:"center",
-        alignItems:"center",padding:"3px 4px",overflow:"hidden",
+        display:"flex",flexDirection:"column",justifyContent:"center",alignItems:"center",
+        padding:"3px 4px",overflow:"hidden",
         transition:"all .12s",
-        transform:hov&&click?"scale(1.03)":"scale(1)",
-        boxShadow:hov&&click?`0 2px 10px ${T.primary}44`:"none",
-        minHeight:36,
+        transform:hov&&click?"scale(1.04)":"scale(1)",
+        boxShadow:hov&&click?`0 2px 12px ${DS.blue}44`:"none",
+        minHeight:36,fontFamily:DS.font,
       }}>
       {estado==="ocupado"&&turno?(
         <>
-          <span style={{fontSize:9,fontWeight:700,textAlign:"center",
-                        overflow:"hidden",textOverflow:"ellipsis",
-                        whiteSpace:"nowrap",maxWidth:"100%",paddingLeft:2,paddingRight:2}}>
-            {turno.cliente?.nombre||"Turno"}
-          </span>
-          <span style={{fontSize:8,opacity:.8,marginTop:1}}>{formatHora(turno.fecha_inicio)}</span>
+          <span style={{fontSize:9,fontWeight:700,textAlign:"center",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",maxWidth:"100%",width:"100%",paddingLeft:2,paddingRight:2}}>{turno.cliente?.nombre||"Turno"}</span>
+          <span style={{fontSize:8,opacity:.75,marginTop:1}}>{formatHora(turno.fecha_inicio)}</span>
         </>
       ):estado==="disponible"?(
         <span style={{fontSize:9,fontWeight:600,opacity:.9}}>Disponible</span>
@@ -335,237 +308,125 @@ function SlotCell({slot,turno,onOcupado,onDisponible,T}){
 }
 
 // ─── Loading / Error ──────────────────────────────────────────────────────────
-function Loading({msg="Cargando...",T}){
+function Loading({msg="Cargando..."}){
   return(
-    <div style={{display:"flex",flexDirection:"column",alignItems:"center",
-                 padding:"40px 0",gap:10,color:T.muted}}>
-      <div style={{width:28,height:28,borderRadius:"50%",
-                   border:`3px solid ${T.border}`,borderTopColor:T.primary,
-                   animation:"spin .7s linear infinite"}}/>
+    <div style={{display:"flex",flexDirection:"column",alignItems:"center",padding:"48px 0",gap:12,color:DS.textSec,fontFamily:DS.font}}>
+      <div style={{width:28,height:28,borderRadius:"50%",border:`2px solid ${DS.border}`,borderTopColor:DS.cyan,animation:"spin .7s linear infinite"}}/>
       <span style={{fontSize:13}}>{msg}</span>
     </div>
   );
 }
-function ErrorBanner({msg,onRetry,T}){
+function ErrorBanner({msg,onRetry}){
   return(
-    <div style={{
-      background:T.dangerL,border:`1px solid ${T.danger}44`,borderRadius:10,
-      padding:"10px 16px",marginBottom:12,fontSize:13,
-      display:"flex",alignItems:"center",justifyContent:"space-between",color:T.danger,
-    }}>
-      <span>⚠️ {msg}</span>
-      {onRetry&&<button onClick={onRetry} style={{
-        background:"none",border:"none",color:T.danger,cursor:"pointer",
-        fontWeight:700,fontSize:12,fontFamily:"'Segoe UI',sans-serif",
-      }}>Reintentar</button>}
+    <div style={{background:DS.errorBg,border:`1px solid ${DS.errorBorder}`,borderRadius:9,padding:"10px 14px",marginBottom:12,fontSize:13,color:DS.errorText,display:"flex",alignItems:"center",justifyContent:"space-between",fontFamily:DS.font}}>
+      <span>⚠ {msg}</span>
+      {onRetry&&<button onClick={onRetry} style={{background:"none",border:"none",color:DS.errorText,cursor:"pointer",fontWeight:700,fontSize:12,fontFamily:DS.font}}>Reintentar</button>}
     </div>
   );
 }
 
-// ─── TARJETA DE CLÍNICA (colapsable) ─────────────────────────────────────────
-function ClinicCard({
-  especialidad, profesionales, disponibilidad, turnoIdx,
-  allHoras, onOcupado, onDisponible, tmode, T, defaultOpen=true,
-}){
+// ─── Tarjeta de clínica ───────────────────────────────────────────────────────
+function ClinicCard({especialidad,profesionales,disponibilidad,turnoIdx,allHoras,onOcupado,onDisponible,defaultOpen=true}){
   const [open,setOpen]=useState(defaultOpen);
-  const [hHdr,hHdrp]=useHover();
+  const [hov,hp]=useHover();
   const [a1,a2]=CLINIC_ACCENT[especialidad]||CLINIC_ACCENT["General"];
-  const sc=SPEC_COLORS[tmode];
-  const [bg,fg]=sc[especialidad]||[T.primaryL,T.primary];
+  const [specBg,specFg]=SPEC_COLORS[especialidad]||["rgba(37,99,235,0.18)","#60a5fa"];
 
-  // Stats de esta tarjeta
-  const totalDisp=profesionales.reduce((acc,p)=>{
-    const slots=disponibilidad[p.id]||[];
-    return acc+slots.filter(s=>s.disponible).length;
-  },0);
-  const totalOcup=profesionales.reduce((acc,p)=>{
-    return acc+Object.keys(turnoIdx[p.id]||{}).length;
-  },0);
+  const totalDisp=profesionales.reduce((acc,p)=>{return acc+(disponibilidad[p.id]||[]).filter(s=>s.disponible).length;},0);
+  const totalOcup=profesionales.reduce((acc,p)=>{return acc+Object.keys(turnoIdx[p.id]||{}).length;},0);
+
+  const CLINIC_ICON={"Clínica":"🏥","Kinesiología":"🦴","Nutrición":"🥗","Odontología":"🦷","Psicología":"🧠","Cardiología":"❤️"};
 
   return(
     <div style={{
-      background:T.surface,border:`1px solid ${T.border}`,
-      borderRadius:14,overflow:"hidden",
-      boxShadow:T.cardShadow,
-      transition:"box-shadow .2s,background .3s,border-color .3s",
-      marginBottom:16,
+      background:DS.cardBg,border:`1px solid ${DS.borderCard}`,
+      borderRadius:14,overflow:"hidden",marginBottom:12,
+      backdropFilter:"blur(20px)",
+      boxShadow:`0 4px 24px rgba(0,0,0,0.4)`,
+      transition:"box-shadow .2s",
     }}>
-      {/* ── Cabecera colapsable ── */}
-      <div
-        {...hHdrp}
-        onClick={()=>setOpen(o=>!o)}
-        style={{
-          display:"flex",alignItems:"center",justifyContent:"space-between",
-          padding:"14px 20px",cursor:"pointer",userSelect:"none",
-          background:hHdr
-            ?(tmode==="dark"?`${a1}22`:`${a1}11`)
-            :T.surface,
-          borderBottom:open?`1px solid ${T.border}`:"none",
-          transition:"background .15s",
-        }}>
-        {/* Izquierda: icono + nombre + badge */}
+      {/* Header colapsable */}
+      <div {...hp} onClick={()=>setOpen(o=>!o)} style={{
+        display:"flex",alignItems:"center",justifyContent:"space-between",
+        padding:"12px 18px",cursor:"pointer",userSelect:"none",
+        background:hov?"rgba(37,99,235,0.06)":"transparent",
+        borderBottom:open?`1px solid ${DS.borderCard}`:"none",
+        transition:"background .15s",
+      }}>
         <div style={{display:"flex",alignItems:"center",gap:12}}>
-          {/* Ícono de acento */}
           <div style={{
             width:40,height:40,borderRadius:10,flexShrink:0,
             background:`linear-gradient(135deg,${a1},${a2})`,
             display:"flex",alignItems:"center",justifyContent:"center",
-            fontSize:18,boxShadow:`0 2px 8px ${a1}55`,
-          }}>
-            {{"Clínica":"🏥","Kinesiología":"🦴","Nutrición":"🥗",
-              "Odontología":"🦷","Psicología":"🧠","Cardiología":"❤️"}[especialidad]||"🏪"}
-          </div>
+            fontSize:18,boxShadow:`0 2px 12px ${a1}55`,
+          }}>{CLINIC_ICON[especialidad]||"🏪"}</div>
           <div>
             <div style={{display:"flex",alignItems:"center",gap:8}}>
-              <span style={{fontSize:16,fontWeight:800,color:T.text}}>{especialidad}</span>
-              <span style={{
-                padding:"2px 9px",borderRadius:99,fontSize:10,fontWeight:700,
-                background:bg,color:fg,
-              }}>{profesionales.length} prof.</span>
+              <span style={{fontSize:15,fontWeight:700,color:DS.text,fontFamily:DS.font}}>{especialidad}</span>
+              <span style={{padding:"1px 8px",borderRadius:99,fontSize:9,fontWeight:700,background:specBg,color:specFg,textTransform:"uppercase",letterSpacing:.5}}>{profesionales.length} prof.</span>
             </div>
-            <div style={{display:"flex",gap:14,marginTop:3}}>
-              <span style={{fontSize:11,color:T.success,fontWeight:600}}>
-                ✅ {totalDisp} disponibles
-              </span>
-              <span style={{fontSize:11,color:T.primary,fontWeight:600}}>
-                📋 {totalOcup} ocupados
-              </span>
+            <div style={{display:"flex",gap:12,marginTop:3}}>
+              <span style={{fontSize:10,color:"#6ee7b7",fontWeight:600}}>✅ {totalDisp} disponibles</span>
+              <span style={{fontSize:10,color:DS.cyan,fontWeight:600}}>📋 {totalOcup} ocupados</span>
             </div>
           </div>
         </div>
-
-        {/* Derecha: avatares + flecha */}
-        <div style={{display:"flex",alignItems:"center",gap:12}}>
-          {/* Mini avatares apilados */}
-          <div style={{display:"flex",alignItems:"center"}}>
+        <div style={{display:"flex",alignItems:"center",gap:10}}>
+          <div style={{display:"flex"}}>
             {profesionales.slice(0,4).map((p,i)=>(
-              <div key={p.id} style={{
-                marginLeft:i>0?-8:0,zIndex:4-i,position:"relative",
-                border:`2px solid ${T.surface}`,borderRadius:"50%",
-              }}>
-                <Avatar nombre={p.nombre} idx={i} size={26}/>
+              <div key={p.id} style={{marginLeft:i>0?-7:0,zIndex:4-i,position:"relative",border:`2px solid rgba(5,5,16,0.9)`,borderRadius:"50%"}}>
+                <Avatar nombre={p.nombre} idx={i} size={24}/>
               </div>
             ))}
-            {profesionales.length>4&&(
-              <div style={{
-                marginLeft:-8,width:26,height:26,borderRadius:"50%",
-                background:T.primaryL,border:`2px solid ${T.surface}`,
-                display:"flex",alignItems:"center",justifyContent:"center",
-                fontSize:9,fontWeight:700,color:T.primary,
-              }}>+{profesionales.length-4}</div>
-            )}
           </div>
-          {/* Flecha */}
           <div style={{
-            width:28,height:28,borderRadius:"50%",
+            width:24,height:24,borderRadius:"50%",
             display:"flex",alignItems:"center",justifyContent:"center",
-            background:T.primaryL,color:T.primary,
-            fontSize:14,fontWeight:700,
-            transform:open?"rotate(180deg)":"rotate(0deg)",
-            transition:"transform .25s",
+            background:"rgba(37,99,235,0.2)",color:DS.cyan,fontSize:12,fontWeight:700,
+            transform:open?"rotate(180deg)":"rotate(0deg)",transition:"transform .25s",
           }}>▾</div>
         </div>
       </div>
 
-      {/* ── Contenido colapsable ── */}
-      <div style={{
-        maxHeight:open?"1200px":"0px",
-        overflow:"hidden",
-        transition:"max-height .35s cubic-bezier(.4,0,.2,1)",
-      }}>
-        {/* Grilla horaria */}
+      {/* Contenido */}
+      <div style={{maxHeight:open?"1200px":"0",overflow:"hidden",transition:"max-height .35s cubic-bezier(.4,0,.2,1)"}}>
         <div style={{overflowX:"auto"}}>
-          <table style={{
-            width:"100%",borderCollapse:"collapse",
-            minWidth:68+profesionales.length*130,
-          }}>
-            {/* Cabecera profesionales */}
+          <table style={{width:"100%",borderCollapse:"collapse",minWidth:68+profesionales.length*130}}>
             <thead>
-              <tr style={{background:T.theadBg,transition:"background .3s"}}>
-                <th style={{
-                  width:68,minWidth:68,padding:"10px 8px",
-                  borderBottom:`1px solid ${T.border}`,
-                  borderRight:`1px solid ${T.border}`,
-                  position:"sticky",left:0,background:T.theadBg,zIndex:2,
-                }}>
-                  <span style={{fontSize:10,color:T.muted,fontWeight:700,
-                                textTransform:"uppercase",letterSpacing:".06em"}}>Hora</span>
+              <tr style={{background:"rgba(15,23,42,0.8)"}}>
+                <th style={{width:64,padding:"9px 6px",borderBottom:`1px solid ${DS.borderCard}`,borderRight:`1px solid ${DS.borderCard}`,position:"sticky",left:0,background:"rgba(15,23,42,0.95)",zIndex:2}}>
+                  <span style={{fontSize:9,color:DS.textSec,fontWeight:700,textTransform:"uppercase",letterSpacing:1,fontFamily:DS.font}}>Hora</span>
                 </th>
                 {profesionales.map((prof,pi)=>(
-                  <th key={prof.id} style={{
-                    padding:"12px 8px 10px",
-                    borderBottom:`1px solid ${T.border}`,
-                    borderLeft:`1px solid ${T.borderL}`,
-                    minWidth:130,fontWeight:"normal",
-                    background:pi%2===1?T.rowAlt:T.theadBg,
-                    transition:"background .3s",
-                  }}>
-                    <div style={{display:"flex",flexDirection:"column",
-                                 alignItems:"center",gap:5}}>
-                      <Avatar nombre={prof.nombre} idx={pi} size={30}/>
-                      <span style={{fontSize:11,fontWeight:700,color:T.text,
-                                    textAlign:"center",lineHeight:1.2}}>
-                        {prof.nombre}
-                      </span>
+                  <th key={prof.id} style={{padding:"11px 6px 10px",borderBottom:`1px solid ${DS.borderCard}`,borderLeft:`1px solid ${DS.borderCard}`,minWidth:130,fontWeight:"normal",background:pi%2===1?"rgba(255,255,255,0.02)":"transparent"}}>
+                    <div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:5}}>
+                      <Avatar nombre={prof.nombre} idx={pi} size={28}/>
+                      <span style={{fontSize:11,fontWeight:700,color:DS.text,textAlign:"center",lineHeight:1.2,fontFamily:DS.font}}>{prof.nombre}</span>
                     </div>
                   </th>
                 ))}
               </tr>
             </thead>
-
-            {/* Filas horarios */}
             <tbody>
               {allHoras.length===0?(
                 <tr><td colSpan={profesionales.length+1}>
-                  <div style={{textAlign:"center",padding:"24px 0",
-                               color:T.muted,fontSize:12}}>
-                    Sin horarios configurados.
-                  </div>
+                  <div style={{textAlign:"center",padding:"24px 0",color:DS.textDis,fontSize:12,fontFamily:DS.font}}>Sin horarios configurados.</div>
                 </td></tr>
               ):allHoras.map((hora,hi)=>{
                 const esCadaHora=hora.endsWith(":00");
                 return(
-                  <tr key={hora} style={{
-                    background:hi%2===0?T.surface:T.rowAlt,
-                    borderBottom:`1px solid ${esCadaHora?T.border:T.borderL}`,
-                    transition:"background .3s",
-                  }}>
-                    {/* Hora */}
-                    <td style={{
-                      width:68,minWidth:68,padding:"3px 8px",
-                      borderRight:`1px solid ${T.border}`,
-                      position:"sticky",left:0,zIndex:1,
-                      background:hi%2===0?T.surface:T.rowAlt,
-                      textAlign:"center",transition:"background .3s",
-                    }}>
-                      <span style={{
-                        fontSize:esCadaHora?12:11,
-                        fontWeight:esCadaHora?700:400,
-                        color:esCadaHora?T.text:T.light,
-                      }}>{hora}</span>
+                  <tr key={hora} style={{borderBottom:`1px solid ${esCadaHora?DS.borderCard:"rgba(30,41,59,0.4)"}`,background:hi%2===0?"transparent":"rgba(255,255,255,0.015)"}}>
+                    <td style={{width:64,padding:"3px 6px",borderRight:`1px solid ${DS.borderCard}`,position:"sticky",left:0,zIndex:1,background:hi%2===0?"rgba(5,5,16,0.95)":"rgba(10,15,30,0.95)",textAlign:"center"}}>
+                      <span style={{fontSize:esCadaHora?11:10,fontWeight:esCadaHora?700:400,color:esCadaHora?DS.text:DS.textDis,fontFamily:DS.fontMono||DS.font}}>{hora}</span>
                     </td>
-
-                    {/* Slots */}
                     {profesionales.map((prof,pi)=>{
                       const slots=disponibilidad[prof.id]||[];
                       const slot=slots.find(s=>s.hora===hora)||null;
                       const turno=turnoIdx[prof.id]?.[hora]||null;
                       return(
-                        <td key={prof.id} style={{
-                          padding:"2px 0",
-                          borderLeft:`1px solid ${T.borderL}`,
-                          background:pi%2===1
-                            ?(hi%2===0?T.rowAlt:T.surfaceAlt)
-                            :(hi%2===0?T.surface:T.rowAlt),
-                          transition:"background .3s",
-                        }}>
+                        <td key={prof.id} style={{padding:"2px 0",borderLeft:`1px solid ${DS.borderCard}`,background:pi%2===1?"rgba(255,255,255,0.015)":"transparent"}}>
                           <div style={{display:"flex",padding:"0 2px"}}>
-                            <SlotCell
-                              slot={slot} turno={turno}
-                              onOcupado={onOcupado}
-                              onDisponible={s=>onDisponible(prof,s)}
-                              T={T}
-                            />
+                            <SlotCell slot={slot} turno={turno} onOcupado={onOcupado} onDisponible={s=>onDisponible(prof,s)}/>
                           </div>
                         </td>
                       );
@@ -576,23 +437,16 @@ function ClinicCard({
             </tbody>
           </table>
         </div>
-
-        {/* Leyenda dentro de la tarjeta */}
-        <div style={{
-          display:"flex",alignItems:"center",gap:18,padding:"8px 18px",
-          borderTop:`1px solid ${T.border}`,background:T.legendBg,
-          transition:"background .3s",
-        }}>
-          <span style={{fontSize:10,fontWeight:600,color:T.muted}}>Referencia:</span>
-          {[
-            {bg:T.slotOcupado.bg,border:T.slotOcupado.border,label:"Ocupado"},
-            {bg:T.slotDisp.bg,   border:T.slotDisp.border,   label:"Disponible"},
-            {bg:T.slotLibre.bg,  border:T.slotLibre.border,  label:"Sin horario"},
-          ].map(({bg,border,label})=>(
-            <div key={label} style={{display:"flex",alignItems:"center",gap:5}}>
-              <div style={{width:9,height:9,borderRadius:2,
-                           background:bg,border:`1.5px solid ${border}`}}/>
-              <span style={{fontSize:10,color:T.muted}}>{label}</span>
+        {/* Leyenda */}
+        <div style={{display:"flex",alignItems:"center",gap:16,padding:"7px 16px",borderTop:`1px solid ${DS.borderCard}`,background:"rgba(15,23,42,0.6)"}}>
+          <span style={{fontSize:9,fontWeight:700,color:DS.textDis,textTransform:"uppercase",letterSpacing:1,fontFamily:DS.font}}>Ref:</span>
+          {[{bg:SLOT_S.ocupado.bg,brd:SLOT_S.ocupado.border,lbl:"Ocupado"},
+            {bg:SLOT_S.disponible.bg,brd:SLOT_S.disponible.border,lbl:"Disponible"},
+            {bg:SLOT_S.libre.bg,brd:SLOT_S.libre.border,lbl:"Sin horario"}
+          ].map(({bg,brd,lbl})=>(
+            <div key={lbl} style={{display:"flex",alignItems:"center",gap:5}}>
+              <div style={{width:9,height:9,borderRadius:2,background:bg,border:`1px solid ${brd}`}}/>
+              <span style={{fontSize:10,color:DS.textSec,fontFamily:DS.font}}>{lbl}</span>
             </div>
           ))}
         </div>
@@ -605,9 +459,6 @@ function ClinicCard({
 export default function Agenda(){
   const navigate=useNavigate();
   const {logout}=useAuth();
-  const [tmode,toggleTheme]=useTheme();
-  const T=THEMES[tmode];
-
   const [fecha,setFecha]=useState(hoyISO());
   const [profes,setProfes]=useState([]);
   const [disp,setDisp]=useState({});
@@ -620,145 +471,82 @@ export default function Agenda(){
 
   const fetchProfes=useCallback(async()=>{
     setLoadingProf(true);setErrorProf("");
-    try{
-      const r=await api.get("/profesionales");
-      setProfes((r.data||[]).filter(p=>p.activo!==false));
-    }catch(e){setErrorProf(e.response?.data?.detail||e.message||"Error al cargar profesionales.");}
+    try{const r=await api.get("/profesionales");setProfes((r.data||[]).filter(p=>p.activo!==false));}
+    catch(e){setErrorProf(e.response?.data?.detail||e.message||"Error al cargar profesionales.");}
     finally{setLoadingProf(false);}
   },[]);
-
   useEffect(()=>{fetchProfes();},[fetchProfes]);
 
   const fetchGrid=useCallback(async()=>{
     if(!profes.length)return;
     setLoadingGrid(true);setErrorGrid("");
     try{
-      const[dispRes,tRes]=await Promise.all([
+      const[dR,tR]=await Promise.all([
         Promise.allSettled(profes.map(p=>api.get("/disponibilidad",{params:{profesional_id:p.id,fecha}}))),
         api.get("/turnos",{params:{fecha}}),
       ]);
-      const nd={};
-      profes.forEach((p,i)=>{nd[p.id]=dispRes[i].status==="fulfilled"?dispRes[i].value.data:[];});
-      setDisp(nd);
-      setTurnos(tRes.data||[]);
+      const nd={};profes.forEach((p,i)=>{nd[p.id]=dR[i].status==="fulfilled"?dR[i].value.data:[];});
+      setDisp(nd);setTurnos(tR.data||[]);
     }catch(e){setErrorGrid(e.response?.data?.detail||e.message||"Error al cargar la agenda.");}
     finally{setLoadingGrid(false);}
   },[profes,fecha]);
-
   useEffect(()=>{fetchGrid();},[fetchGrid]);
 
-  // Agrupar por especialidad
   const specs=[...new Set(profes.map(p=>p.especialidad).filter(Boolean))].sort();
   const profsFiltrados=filtroSpec==="Todas"?profes:profes.filter(p=>p.especialidad===filtroSpec);
-
-  // Índice turnos por prof
-  const turnoIdx={};
-  turnos.forEach(t=>{
-    const pid=t.profesional?.id;if(!pid)return;
-    if(!turnoIdx[pid])turnoIdx[pid]={};
-    turnoIdx[pid][formatHora(t.fecha_inicio)]=t;
-  });
-
-  // Union de horas
   const allHoras=[...new Set(Object.values(disp).flatMap(s=>s.map(x=>x.hora)))].sort();
-
-  // Agrupar profesionales filtrados por especialidad
-  const grupos={};
-  profsFiltrados.forEach(p=>{
-    const k=p.especialidad||"General";
-    if(!grupos[k])grupos[k]=[];
-    grupos[k].push(p);
-  });
-
+  const turnoIdx={};
+  turnos.forEach(t=>{const pid=t.profesional?.id;if(!pid)return;if(!turnoIdx[pid])turnoIdx[pid]={};turnoIdx[pid][formatHora(t.fecha_inicio)]=t;});
+  const grupos={};profsFiltrados.forEach(p=>{const k=p.especialidad||"General";if(!grupos[k])grupos[k]=[];grupos[k].push(p);});
   const totalDisp=Object.values(disp).flatMap(s=>s).filter(s=>s.disponible).length;
-  const handleLogout=()=>{logout();navigate("/login");};
 
   return(
     <>
-      <style>{`
-        @keyframes spin{to{transform:rotate(360deg);}}
-        *{box-sizing:border-box;}
-        ::-webkit-scrollbar{width:6px;height:6px;}
-        ::-webkit-scrollbar-track{background:transparent;}
-        ::-webkit-scrollbar-thumb{background:${T.border};border-radius:3px;}
-      `}</style>
-
-      <div style={{
-        minHeight:"100vh",background:T.bg,
-        fontFamily:"'Segoe UI',sans-serif",
-        transition:"background .3s",
-      }}>
-        <NavBar
-          navigate={navigate} onLogout={handleLogout}
-          mode={tmode} onToggle={toggleTheme} T={T}
-        />
-
-        <main style={{maxWidth:1400,margin:"0 auto",padding:"24px 32px"}}>
+      <style>{`@keyframes spin{to{transform:rotate(360deg);}}*{box-sizing:border-box;}::-webkit-scrollbar{width:5px;height:5px;}::-webkit-scrollbar-track{background:transparent;}::-webkit-scrollbar-thumb{background:#1e293b;border-radius:3px;}`}</style>
+      <Starfield/>
+      <div style={{minHeight:"100vh",fontFamily:DS.font,position:"relative",zIndex:1}}>
+        <NavBar navigate={navigate} onLogout={()=>{logout();navigate("/login");}}/>
+        <main style={{maxWidth:1400,margin:"0 auto",padding:"22px 28px"}}>
 
           {/* Header */}
-          <div style={{display:"flex",alignItems:"flex-start",justifyContent:"space-between",
-                       flexWrap:"wrap",gap:12,marginBottom:16}}>
+          <div style={{display:"flex",alignItems:"flex-start",justifyContent:"space-between",flexWrap:"wrap",gap:12,marginBottom:14}}>
             <div>
-              <h1 style={{margin:0,fontSize:22,fontWeight:800,color:T.text,letterSpacing:"-.02em"}}>
-                📅 Agenda de hoy
-              </h1>
-              <p style={{margin:"3px 0 0",fontSize:13,color:T.muted,textTransform:"capitalize"}}>
-                {formatTitulo(fecha)}
-              </p>
+              <h1 style={{margin:0,fontSize:20,fontWeight:700,color:DS.text,letterSpacing:-.5}}>📅 Agenda de hoy</h1>
+              <p style={{margin:"3px 0 0",fontSize:12,color:DS.textSec,textTransform:"capitalize"}}>{formatTitulo(fecha)}</p>
             </div>
             <div style={{display:"flex",alignItems:"center",gap:10,flexWrap:"wrap"}}>
-              <DateNav fecha={fecha} onChange={setFecha} T={T}/>
-              <PrimaryBtn onClick={()=>navigate("/nuevo-turno")} T={T}>+ Nuevo turno</PrimaryBtn>
+              <DateNav fecha={fecha} onChange={setFecha}/>
+              <PrimaryBtn onClick={()=>navigate("/nuevo-turno")}>+ Nuevo turno</PrimaryBtn>
             </div>
           </div>
 
-          {/* Filtro */}
-          {specs.length>0&&(
-            <div style={{marginBottom:16}}>
-              <SpecFilter specs={specs} value={filtroSpec} onChange={setFiltroSpec} tmode={tmode} T={T}/>
-            </div>
-          )}
-
-          {errorProf&&<ErrorBanner msg={errorProf} onRetry={fetchProfes} T={T}/>}
-          {errorGrid&&<ErrorBanner msg={errorGrid} onRetry={fetchGrid} T={T}/>}
+          {specs.length>0&&<div style={{marginBottom:14}}><SpecFilter specs={specs} value={filtroSpec} onChange={setFiltroSpec}/></div>}
+          {errorProf&&<ErrorBanner msg={errorProf} onRetry={fetchProfes}/>}
+          {errorGrid&&<ErrorBanner msg={errorGrid} onRetry={fetchGrid}/>}
 
           {/* Stats */}
           {!loadingProf&&!errorProf&&(
-            <div style={{display:"flex",gap:10,flexWrap:"wrap",marginBottom:20}}>
-              <StatCard icon="🏥" label="Clínicas"           value={Object.keys(grupos).length} color={T.primary} T={T}/>
-              <StatCard icon="👤" label="Profesionales"      value={profsFiltrados.length}       color={T.primaryD} T={T}/>
-              <StatCard icon="✅" label="Slots disponibles"  value={totalDisp}                   color={T.success} T={T}/>
-              <StatCard icon="📋" label="Turnos del día"     value={turnos.length}               color={T.warn} T={T}/>
+            <div style={{display:"flex",gap:9,flexWrap:"wrap",marginBottom:18}}>
+              <StatCard icon="🏥" label="Clínicas"      value={Object.keys(grupos).length} color={DS.blue}/>
+              <StatCard icon="👤" label="Profesionales" value={profsFiltrados.length}       color="#8b5cf6"/>
+              <StatCard icon="✅" label="Disponibles"   value={totalDisp}                   color={DS.cyan}/>
+              <StatCard icon="📋" label="Turnos"        value={turnos.length}               color="#f59e0b"/>
             </div>
           )}
 
-          {/* Tarjetas por clínica */}
           {loadingProf?(
-            <Loading msg="Cargando profesionales..." T={T}/>
+            <Loading msg="Cargando profesionales..."/>
           ):Object.keys(grupos).length===0?(
-            <div style={{textAlign:"center",padding:"48px 0",color:T.muted,fontSize:14}}>
-              {filtroSpec!=="Todas"
-                ?`No hay profesionales con especialidad "${filtroSpec}".`
-                :"No hay profesionales registrados."}
+            <div style={{textAlign:"center",padding:"48px 0",color:DS.textDis,fontSize:14,fontFamily:DS.font}}>
+              {filtroSpec!=="Todas"?`Sin profesionales con especialidad "${filtroSpec}".`:"No hay profesionales registrados."}
             </div>
           ):Object.entries(grupos).map(([esp,profs],ci)=>(
-            <ClinicCard
-              key={esp}
-              especialidad={esp}
-              profesionales={profs}
-              disponibilidad={disp}
-              turnoIdx={turnoIdx}
-              allHoras={allHoras}
+            <ClinicCard key={esp} especialidad={esp} profesionales={profs}
+              disponibilidad={disp} turnoIdx={turnoIdx} allHoras={allHoras}
               onOcupado={t=>navigate("/turnos/"+t.id)}
-              onDisponible={(prof,slot)=>navigate(
-                `/nuevo-turno?profesional_id=${prof.id}&fecha=${fecha}&hora=${slot.hora}`
-              )}
-              tmode={tmode}
-              T={T}
-              defaultOpen={ci===0}
-            />
+              onDisponible={(prof,slot)=>navigate(`/nuevo-turno?profesional_id=${prof.id}&fecha=${fecha}&hora=${slot.hora}`)}
+              defaultOpen={ci===0}/>
           ))}
-
         </main>
       </div>
     </>
